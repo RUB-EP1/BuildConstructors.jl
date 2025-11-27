@@ -47,7 +47,24 @@ function deserialize(::Type{<:FlexibleParameter}, all_fields)
     NamedTuple{(Symbol(name),)}((starting_value,))
 end
 
+serialize(c::AdvancedParameter; pars) = LittleDict(
+    "type" => "AdvancedParameter",
+    "name" => c.name,
+    "starting_value" => value(c; pars),
+    "boundaries" => c.boundaries,
+    "uncertainty" => c.uncertainty,
+    "fixed" => c.fixed,
+)
 
+function deserialize(::Type{<:AdvancedParameter}, all_fields)
+    name = all_fields["name"]
+    starting_value = all_fields["starting_value"]
+    boundaries = Tuple(all_fields["boundaries"])
+    uncertainty = all_fields["uncertainty"]
+    fixed = get(all_fields, "fixed", false)
+    AdvancedParameter(name, starting_value, boundaries, uncertainty, fixed),
+    NamedTuple{(Symbol(name),)}((starting_value,))
+end
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 

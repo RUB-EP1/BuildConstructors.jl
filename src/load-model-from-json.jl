@@ -3,23 +3,27 @@
 using JSON, OrderedCollections
 
 function convert_database_to_prb(db, phys, res, bg)
+    # pick components
+    model_p = db["physical"][phys]
+    model_r = db["resolution"][res]
+    model_b = db["background"][bg]
+
+    # Fit range is the "support" stored in the database top-level
+    fit_range = db["support"]  # expect a 2-element vector [low, high]
+
+    # Set the background support = fit range
+    model_b["support"] = fit_range
+
+    phys_support = fit_range .+ model_r["support"]
+    model_p["support"] = phys_support
+
     return OrderedDict(
         "type" => "ConstructorOfPRBModel",
-
-        # you choose which physical component goes here
-        "model_p" => db["physical"]["$(phys)"],
-
-        # resolution piece
-        "model_r" => db["resolution"]["$(res)"],
-
-        # background
-        "model_b" => db["background"]["$(bg)"],
-
-        # mixing fraction fs – here fixed to some value (you may choose)
+        "model_p" => model_p,
+        "model_r" => model_r,
+        "model_b" => model_b,
         "description_of_fs" => db["description_of_fs"],
-
-        # actual fit range — larger than from physical part
-        "support" => db["support"],
+        "support" => fit_range
     )
 end
 
