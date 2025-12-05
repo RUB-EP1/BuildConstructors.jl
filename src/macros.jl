@@ -297,9 +297,10 @@ function generate_build_model_function(constructor_name, ordered_fields, body)
     end
 
     # Generate function definition
+    build_model_ref = Expr(:., :BuildConstructors, QuoteNode(:build_model))
     return Expr(
         :function,
-        Expr(:call, :build_model, Expr(:(::), :c, constructor_name), :pars),
+        Expr(:call, build_model_ref, Expr(:(::), :c, constructor_name), :pars),
         build_model_body,
     )
 end

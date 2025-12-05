@@ -1,5 +1,8 @@
 abstract type AbstractConstructor end
 
+build_model(c::AbstractConstructor, pars) =
+    error("`build_model` not implemented for $(typeof(c)). You need to define a `build_mode(c::ConstructorOfYourModel, pars) -> YourModel` function for your constructor.")
+
 # for all constructors, apply the function to all fields
 for func in (:fix!, :release!, :update!)
     @eval function $func(c::AbstractConstructor, pars)
