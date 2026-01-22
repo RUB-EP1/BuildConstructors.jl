@@ -24,7 +24,7 @@ function convert_database_to_prb(db, phys, res, bg)
         "model_b" => model_b,
         "description_of_fs" => db["description_of_fs"],
         "support" => fit_range,
-        "gridsize" => db["gridsize"],
+        "grid_size" => db["grid_size"],
     )
 end
 

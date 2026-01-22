@@ -305,6 +305,6 @@ function deserialize(::Type{<:ConstructorOfPRBModel}, all_fields)
     appendix = merge(appendix, appendix_fs)
 
     support = all_fields["support"] |> Tuple
-    gridsize = Int(all_fields["gridsize"])
-    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support, gridsize), appendix
+    grid_size = Int(all_fields["grid_size"])
+    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support, grid_size), appendix
 end
