@@ -1,4 +1,5 @@
 {
+  "grid_size": 10000,
   "physical": {
     "bw": {
       "type": "ConstructorOfBW",

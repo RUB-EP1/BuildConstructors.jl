@@ -8,6 +8,7 @@ constructor = ConstructorOfPRBModel(
     ConstructorOfPol1(FlexibleParameter("c1", 0.3), (1.0, 2.5)),
     AdvancedParameter("fs", 0.5; boundaries = (0.0, 1.0), uncertainty = 0.01),
     (1.0, 2.5),
+    10000,
 )
 
 @testset "FlexibleParameter is mutable" begin

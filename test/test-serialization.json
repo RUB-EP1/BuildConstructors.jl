@@ -23,6 +23,7 @@
       "support": [1.1, 2.5]
     },
     "description_of_fs": { "type": "Fixed", "value": 0.5 },
-    "support": [-26.38, 32.57]
+    "support": [-26.38, 32.57],
+    "grid_size": 10000
   }
 }

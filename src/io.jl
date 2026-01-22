@@ -277,7 +277,7 @@ serialize(c::ConstructorOfPRBModel; pars) = LittleDict(
     "model_b" => serialize(c.model_b; pars),
     "description_of_fs" => serialize(c.description_of_fs; pars),
     "support" => c.support,
-    "gridsize" => c.gridsize,
+    "grid_size" => c.grid_size,
 )
 
 function deserialize(::Type{<:ConstructorOfPRBModel}, all_fields)
