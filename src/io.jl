@@ -277,6 +277,7 @@ serialize(c::ConstructorOfPRBModel; pars) = LittleDict(
     "model_b" => serialize(c.model_b; pars),
     "description_of_fs" => serialize(c.description_of_fs; pars),
     "support" => c.support,
+    "gridsize" => c.gridsize,
 )
 
 function deserialize(::Type{<:ConstructorOfPRBModel}, all_fields)
@@ -304,5 +305,6 @@ function deserialize(::Type{<:ConstructorOfPRBModel}, all_fields)
     appendix = merge(appendix, appendix_fs)
 
     support = all_fields["support"] |> Tuple
-    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support), appendix
+    gridsize = all_fields["gridsize"]
+    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support, gridsize), appendix
 end
