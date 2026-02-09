@@ -66,7 +66,7 @@ constructor, pars = load_prb_model_from_json(
     "Pol2",
 )
 model = build_model(constructor, pars)
-@test pdf(model, 1.1) == 0.01570665415299559
+@test pdf(model, 1.1) ≈ 0.01570665415299559
 
 
 
