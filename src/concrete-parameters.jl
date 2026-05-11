@@ -130,9 +130,11 @@ release!(p::FlexibleParameter, par_names) =
 
 Replace the stored value with `pars[p.name]` when that name is present.
 """
-update!(c::FlexibleParameter, pars) =
-    Symbol(c.name) ∈ keys(pars) ? setfield!(c, :value, getproperty(pars, Symbol(c.name))) :
-    nothing
+function update!(c::FlexibleParameter, pars)
+    sym = Symbol(c.name)
+    hasproperty(pars, sym) && (c.value = getproperty(pars, sym))
+    return nothing
+end
 
 """
     running_values(p::FlexibleParameter)
@@ -222,9 +224,11 @@ release!(p::AdvancedParameter, par_names) =
 
 Replace the stored value with `pars[p.name]` when that name is present.
 """
-update!(c::AdvancedParameter, pars) =
-    Symbol(c.name) ∈ keys(pars) ? setfield!(c, :value, getproperty(pars, Symbol(c.name))) :
-    nothing
+function update!(c::AdvancedParameter, pars)
+    sym = Symbol(c.name)
+    hasproperty(pars, sym) && (c.value = getproperty(pars, sym))
+    return nothing
+end
 
 """
     running_values(p::AdvancedParameter)
