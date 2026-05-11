@@ -167,7 +167,7 @@ running_lower_boundaries(p::FlexibleParameter) = NamedTuple{(Symbol(p.name),)}((
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # advanced parameter, can be fixed and released, and has boundaries and uncertainty
 """
-    AdvancedParameter(name, value; boundaries = (Inf, -Inf), uncertainty = 1.0)
+    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0)
     AdvancedParameter(name, value, boundaries, uncertainty, fixed)
 
 Mutable parameter descriptor with stored value, bounds, uncertainty, and
@@ -194,11 +194,11 @@ Resolve to the stored value when `p.fixed` is true; otherwise read `p.name` from
 value(p::AdvancedParameter; pars) = p.fixed ? p.value : getproperty(pars, Symbol(p.name))
 
 """
-    AdvancedParameter(name, value; boundaries = (Inf, -Inf), uncertainty = 1.0)
+    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0)
 
 Create a free `AdvancedParameter` with stored value, bounds, and uncertainty.
 """
-AdvancedParameter(name, value; boundaries = (Inf, -Inf), uncertainty = 1.0) =
+AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0) =
     AdvancedParameter(name, value, boundaries, uncertainty, false)
 
 """
