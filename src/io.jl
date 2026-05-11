@@ -17,10 +17,29 @@ register!(ConstructorOfPRBModel)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+"""
+    serialize(constructor_or_parameter; pars)
+
+Convert a parameter descriptor or constructor into a dictionary-like object.
+
+For running parameters, `pars` supplies the current numerical values that should be
+stored as starting values. Serialization is optional: the core constructor pattern
+works without it, but these methods are useful when constructor descriptions need
+to be saved to JSON or a database.
+"""
 serialize(c::Fixed; pars) = LittleDict("type" => "Fixed", "value" => c.value)
 serialize(c::Running; pars) =
     LittleDict("type" => "Running", "name" => c.name, "starting_value" => value(c; pars))
 
+"""
+    deserialize(::Type{T}, all_fields) -> constructor_or_parameter, starting_parameters
+
+Rebuild a parameter descriptor or constructor from serialized fields.
+
+The second return value is a `NamedTuple` of starting values collected while
+deserializing running parameters. Custom serializable types should implement this
+method and call `register!(T)` so type names can be resolved from serialized data.
+"""
 function deserialize(::Type{<:Fixed}, all_fields)
     value = all_fields["value"]
     Fixed(value), NamedTuple()

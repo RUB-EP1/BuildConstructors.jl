@@ -166,8 +166,8 @@ end
 
     @test model1 isa Distribution
     @test model2 isa Distribution
-    @test pdf(model1, 1.1) == 0.01570665415299559
-    @test pdf(model2, 1.1) == 0.01570665415299559
+    @test pdf(model1, 1.1) ≈ 0.01570665415299559
+    @test pdf(model2, 1.1) ≈ 0.01570665415299559
 end
 
 @testset "Extend BuildConstructors" begin

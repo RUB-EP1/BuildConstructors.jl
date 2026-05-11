@@ -120,6 +120,9 @@ end
     @test upper_bounds.c1 == Inf
     @test upper_bounds.fs == 1.0
     @test keys(upper_bounds) == (:m, :Γ, :σ, :c1, :fs)
+
+    p_default = AdvancedParameter("advanced", 1.0)
+    @test running_upper_boundaries(p_default) == (advanced = Inf,)
 end
 
 @testset "running_lower_boundaries" begin
@@ -146,4 +149,7 @@ end
     @test lower_bounds.c1 == -Inf
     @test lower_bounds.fs == 0.0
     @test keys(lower_bounds) == (:m, :Γ, :σ, :c1, :fs)
+
+    p_default = AdvancedParameter("advanced", 1.0)
+    @test running_lower_boundaries(p_default) == (advanced = -Inf,)
 end

@@ -2,6 +2,16 @@
 
 using JSON, OrderedCollections
 
+"""
+    convert_database_to_prb(db, phys, res, bg)
+
+Convert a database-style PRB entry into the serialized
+`ConstructorOfPRBModel` shape expected by `deserialize`.
+
+This is a domain-specific convenience for the included
+physical-resolution-background examples. It is not required for general
+`BuildConstructors.jl` usage.
+"""
 function convert_database_to_prb(db, phys, res, bg)
     # pick components
     model_p = db["physical"][phys]
@@ -28,6 +38,16 @@ function convert_database_to_prb(db, phys, res, bg)
     )
 end
 
+"""
+    load_prb_model_from_json(filename, phys, res, bg) -> constructor, starting_parameters
+
+Load a physical-resolution-background constructor from a JSON database file.
+
+The returned constructor can be passed to `build_model(constructor,
+starting_parameters)` or updated with another parameter container. This function
+is an optional helper for the bundled PRB workflow rather than part of the minimal
+constructor pattern.
+"""
 function load_prb_model_from_json(filename, phys, res, bg)
     db = JSON.parsefile(filename; dicttype = OrderedDict)
     converted = convert_database_to_prb(db, phys, res, bg)

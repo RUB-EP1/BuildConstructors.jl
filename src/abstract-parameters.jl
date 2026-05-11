@@ -1,3 +1,14 @@
+"""
+    AbstractParameter
+
+Abstract supertype for parameter descriptors.
+
+A parameter descriptor is metadata about a numeric value, not necessarily the
+numeric value itself. Subtypes should implement `BuildConstructors.value(p; pars)`
+to define how the number is obtained when a constructor is built. They may also
+implement `fix!`, `release!`, `update!`, and the `running_*` collectors when they
+carry fixed/free state, defaults, bounds, or uncertainties.
+"""
 abstract type AbstractParameter end
 
 # Any parameter realization, needs to implement the following functions:

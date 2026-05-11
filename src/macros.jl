@@ -1,25 +1,41 @@
 """
-    @with_parameters ModelName; field1, field2::P, field3::Type, ... begin
-        # model-building logic
+    @with_parameters ModelName; fields... begin
+        body
     end
 
-Generate a constructor struct and build_model function for a model with the given fields.
+Generate a `ConstructorOfModelName` subtype of `AbstractConstructor` and a
+matching `build_model(::ConstructorOfModelName, pars)` method.
 
-Fields can be of three types:
-1. `field` (no type) → parametric field (type parameter P1, P2, ...)
-2. `field::P` → parameter field (becomes `description_of_field::T1<:AbstractParameter`)
-3. `field::Type` → constant field (accessed via `_.field`)
+The macro separates fields into three roles:
 
-The order of fields is preserved in the generated struct.
+- `field::P`: parameter descriptor field. The generated struct stores it as
+  `description_of_field`, constrained to `AbstractParameter`. Inside `body`,
+  `field` is already the resolved numeric value, computed with
+  `BuildConstructors.value(c.description_of_field; pars)`.
+- `field::SomeType`: constant field. The generated struct stores it directly with
+  the declared type. Inside `body`, access it as `_.field`.
+- `field`: parametric field. The generated struct stores it directly with an
+  inferred type parameter. This is useful for nested constructors or arbitrary
+  user objects. Inside `body`, access it as `_.field`.
 
-# Example
+The generated constructor argument order is parametric fields first, parameter
+descriptor fields second, and constant fields last. This keeps all generated
+constructors predictable even when fields are declared in a mixed order.
+
+Inside `body`, parameter names such as `μ` and `σ` refer to resolved values.
+Non-parameter fields must be accessed through the placeholder `_`, for example
+`_.support` or `_.child`. This makes it visually clear which values are part of
+the constructor metadata and which values are runtime parameters.
+
+# Examples
 ```julia
 @with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64} begin
     truncated(Normal(μ, σ), _.support[1], _.support[2])
 end
 
 @with_parameters ScaleModel; D, scale::P begin
-    build_model(_.D, pars) * scale
+    child = build_model(_.D, pars)
+    x -> scale * child(x)
 end
 ```
 """
