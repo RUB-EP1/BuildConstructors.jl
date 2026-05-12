@@ -18,24 +18,25 @@ composition, or a domain-specific type from another package. `BuildConstructors.
 does not impose a dimensionality, a call signature, or a model interface. Those
 choices stay with you.
 
-## Essential vs Optional
+## Core Pattern
 
-The essential pattern is small:
+The core pattern is small:
 
 1. Use parameter descriptors such as `Fixed`, `Running`, or your own
    `AbstractParameter` subtype.
 2. Store those descriptors in an `AbstractConstructor`.
 3. Implement `build_model(constructor, pars)`.
 
-Everything else is convenience:
+The package also ships a few helper layers and example constructors. They use the
+same mechanism, but they are not requirements for adopting the pattern:
 
-| Layer | Essential? | Why it exists |
-| --- | --- | --- |
-| `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Useful defaults | Common descriptor types for fixed/free parameters, defaults, bounds, and uncertainties. |
-| `running_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
-| `@with_parameters` | Convenience | Removes boilerplate when a constructor mostly maps parameter descriptors into a `build_model` body. |
-| `serialize` / `deserialize` / `register!` | Optional | Save and restore constructor descriptions through JSON or database-like workflows. |
-| PRB model constructors and loaders | Optional example | Domain-specific probability-model utilities built with the same general mechanism. |
+| Layer | Role |
+| --- | --- |
+| `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Ready-made descriptors for fixed/free parameters, defaults, bounds, and uncertainties. |
+| `running_values`, `fix!`, `release!`, `update!` | Recursive tools for collecting and mutating metadata in nested constructors. |
+| `@with_parameters` | Boilerplate reduction when a constructor mostly maps parameter descriptors into a `build_model` body. |
+| `serialize` / `deserialize` / `register!` | File/database interop for workflows that need to save and restore constructor descriptions. |
+| PRB model constructors and loaders | A bundled physical-resolution-background example, kept in `src/prb-model.jl` as a domain-specific workflow. |
 
 If your object already has a perfect home for metadata, you may not need this
 package. It becomes useful when the object should remain clean, external,

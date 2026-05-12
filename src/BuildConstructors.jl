@@ -38,11 +38,6 @@ include("macros.jl")
 
 include("primitives.jl")
 
-# combined model
-export ConstructorOfPRBModel
-include("phys-res-bgd-model.jl")
-
-
 # IO
 # registration mechanism
 include("register-type.jl")
@@ -52,9 +47,10 @@ export serialize
 export deserialize
 include("io.jl")
 
-# tooling
+# domain-specific PRB workflow
+export ConstructorOfPRBModel
 export convert_database_to_prb
 export load_prb_model_from_json
-include("load-model-from-json.jl")
+include("prb-model.jl")
 
 end # module

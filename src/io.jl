@@ -12,9 +12,6 @@ register!(ConstructorOfGaussian)
 register!(ConstructorOfPol1)
 register!(ConstructorOfPol2)
 
-# complex model
-register!(ConstructorOfPRBModel)
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 """
@@ -285,45 +282,4 @@ function deserialize(::Type{<:ConstructorOfBraaten}, all_fields)
     # 
     support = all_fields["support"] |> Tuple
     return ConstructorOfBraaten(description_of_γre, description_of_γim, support), appendix
-end
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-serialize(c::ConstructorOfPRBModel; pars) = LittleDict(
-    "type" => "ConstructorOfPRBModel",
-    "model_p" => serialize(c.model_p; pars),
-    "model_r" => serialize(c.model_r; pars),
-    "model_b" => serialize(c.model_b; pars),
-    "description_of_fs" => serialize(c.description_of_fs; pars),
-    "support" => c.support,
-    "grid_size" => c.grid_size,
-)
-
-function deserialize(::Type{<:ConstructorOfPRBModel}, all_fields)
-    appendix = NamedTuple()
-
-
-    description_of_p = all_fields["model_p"]
-    type_p = _type_from_string(description_of_p["type"])
-    model_p, appendix_p = deserialize(type_p, description_of_p)
-    appendix = merge(appendix, appendix_p)
-
-    description_of_r = all_fields["model_r"]
-    type_r = _type_from_string(description_of_r["type"])
-    model_r, appendix_r = deserialize(type_r, description_of_r)
-    appendix = merge(appendix, appendix_r)
-
-    description_of_b = all_fields["model_b"]
-    type_b = _type_from_string(description_of_b["type"])
-    model_b, appendix_b = deserialize(type_b, description_of_b)
-    appendix = merge(appendix, appendix_b)
-
-    description_of_fs = all_fields["description_of_fs"]
-    type_fs = _type_from_string(description_of_fs["type"])
-    description_of_fs, appendix_fs = deserialize(type_fs, description_of_fs)
-    appendix = merge(appendix, appendix_fs)
-
-    support = all_fields["support"] |> Tuple
-    grid_size = Int(all_fields["grid_size"])
-    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support, grid_size), appendix
 end
