@@ -24,15 +24,6 @@ function register!(type::Type; type_name::String = string(type))
     return nothing
 end
 
-"""
-    _type_from_string(type_name::String) -> Type
-
-Resolve a serialized `"type"` field to a `Type`: registered names first,
-then identifiers on the activated `physics_models_extension()` module
-(if any), then `BuildConstructors`, then `Base`. Arbitrary Julia expressions are
-never parsed or evaluated — only simple identifiers are allowed — so untrusted JSON
-cannot cause code execution via this path.
-"""
 function _type_from_string(type_name::String)
     # First check registry for user-registered types
     if haskey(_type_registry, type_name)
