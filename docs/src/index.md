@@ -30,6 +30,22 @@ model = build_model(constructor, start)
 
 The constructor carries the metadata. The built object is just a `Normal`.
 
+## Optional physics constructors
+
+When you load `JSON`, `Distributions`, `DistributionsHEP`, and `NumericalDistributions`
+in the same Julia session, the `PhysicsModelsExt` package extension loads. Use
+[`BuildConstructors.physics_models_extension`](@ref) to obtain that module (or
+`nothing` if those packages are not loaded). It exports built-in constructors
+such as `ConstructorOfBW` and helpers `convert_database_to_prb` and `load_prb_model_from_json`.
+
+```julia
+using BuildConstructors
+using Distributions, DistributionsHEP, JSON, NumericalDistributions
+Phys = physics_models_extension()
+Phys === nothing && error("extension not active")
+Phys.load_prb_model_from_json("database.json", "bw", "CBpSECH", "Pol2")
+```
+
 ## Public API
 
 ```@docs
@@ -50,6 +66,5 @@ BuildConstructors.update!
 BuildConstructors.@with_parameters
 BuildConstructors.serialize
 BuildConstructors.deserialize
-BuildConstructors.convert_database_to_prb
-BuildConstructors.load_prb_model_from_json
+BuildConstructors.physics_models_extension
 ```

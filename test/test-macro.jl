@@ -1,7 +1,10 @@
 using DistributionsHEP  # For Chebyshev
-using BuildConstructors
+using JSON
 using Distributions
+using NumericalDistributions
 using Test
+using BuildConstructors
+include("physics_access.jl")
 
 # Test Case 1: Simple 2-parameter model (Gaussian)
 # This should generate the same as the manual ConstructorOfGaussian

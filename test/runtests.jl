@@ -1,8 +1,44 @@
 using Test
 using BuildConstructors
+
+@with_parameters(AffineCore; slope::P, intercept::P, begin
+    x -> slope * x + intercept
+end)
+
+@testset "Core functionality without weak dependencies" begin
+    @test BuildConstructors.physics_models_extension() === nothing
+
+    fixed = Fixed(2.0)
+    running = Running("x")
+    @test BuildConstructors.value(fixed; pars = (x = 3.0,)) == 2.0
+    @test BuildConstructors.value(running; pars = (x = 3.0,)) == 3.0
+    @test isequal(running_values(running), (x = missing,))
+
+    constructor = ConstructorOfAffineCore(Fixed(2.0), Running("b"))
+    model = build_model(constructor, (b = 1.5,))
+    @test model(3.0) == 7.5
+    @test isequal(running_values(constructor), (b = missing,))
+
+    @test BuildConstructors._type_from_string("Fixed") === Fixed
+    @test BuildConstructors._type_from_string("Int") === Int
+    @test_throws ErrorException BuildConstructors._type_from_string("DefinitelyMissingType")
+    @test_throws ErrorException BuildConstructors._type_from_string("Fixed{Float64}")
+
+    eval_sentinel = Ref(false)
+    payload = "begin eval_sentinel[] = true; Fixed end"
+    @test_throws ErrorException BuildConstructors._type_from_string(payload)
+    @test !eval_sentinel[]
+
+    @test_throws ErrorException BuildConstructors._type_from_string("serialize")
+end
+
+# Load weak dependencies so PhysicsModelsExt is activated,
+# then pull extension symbols into Main for the physics tests.
 using Distributions
-using NumericalDistributions
+using DistributionsHEP
 using JSON
+using NumericalDistributions
+include("physics_access.jl")
 
 @testset "BuildConstructors tests" begin
     # let # to be replaced by the line above once working
@@ -82,8 +118,6 @@ data["my_model"]["model_p"]
 
 
 all_fields = data["my_model"]
-string_type = all_fields["type"]
-evaluated_type = eval(Meta.parse(string_type))
 
 
 let
@@ -122,7 +156,6 @@ let
     @test s == (σ = 0.1,)
     @test c isa ConstructorOfPRBModel
 end
-
 
 @testset "Serialization round-trip" begin
     # 1. Build a model constructor + parameters manually

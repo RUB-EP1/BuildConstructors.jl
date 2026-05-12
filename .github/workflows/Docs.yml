@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - "docs/**"
+      - "ext/**"
       - "src/**"
       - "Project.toml"
       - ".github/workflows/Docs.yml"
   pull_request:
     paths:
       - "docs/**"
+      - "ext/**"
       - "src/**"
       - "Project.toml"
       - ".github/workflows/Docs.yml"
@@ -24,6 +26,10 @@ jobs:
   docbuild:
     name: Documentation
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      statuses: write
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
@@ -39,5 +45,7 @@ jobs:
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
-      - name: Build HTML
-        run: julia --project=docs docs/make.jl
+      - name: Build and deploy
+        run: julia --color=yes --project=docs docs/make.jl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
