@@ -16,12 +16,15 @@ function extract_body_block(expr)
     return nothing
 end
 
-# Field type enum
+# Parsed field roles for `@with_parameters` (same payload shape, different lowering — kept
+# as distinct types so dispatch selects struct generation and build_model extraction).
+"""Bare `field` in the macro list → struct slot `field::Pi` (unconstrained type param); use `_.field` in the body."""
 struct ParametricField
     name::Symbol
 end
 
-struct ParameterField
+"""`field::P` → struct slot `description_of_field::Ti` with `Ti <: AbstractParameter`; `field` in the body is the resolved value."""
+struct DescriptorField
     name::Symbol
 end
 
@@ -45,7 +48,7 @@ function parse_field(expr)
 
         # Check if type is :P (parameter field)
         if field_type == :P
-            return ParameterField(field_name)
+            return DescriptorField(field_name)
         else
             # Any other type → constant field
             return ConstantField(field_name, field_type)
@@ -137,7 +140,7 @@ function add_struct_field!(struct_fields, field::ParametricField, parametric_idx
     return parametric_idx + 1
 end
 
-function add_struct_field!(struct_fields, field::ParameterField, param_idx)
+function add_struct_field!(struct_fields, field::DescriptorField, param_idx)
     type_param = Symbol("T", param_idx)
     field_name = Symbol("description_of_", field.name)
     push!(struct_fields.args, Expr(:(::), field_name, type_param))
@@ -151,7 +154,7 @@ end
 
 # Multiple dispatch: Check field type for filtering
 field_type(::ParametricField) = :parametric
-field_type(::ParameterField) = :parameter
+field_type(::DescriptorField) = :parameter
 field_type(::ConstantField) = :constant
 
 # Helper: Generate struct fields in reordered format: parametric first, then parameters, then constants
@@ -202,12 +205,12 @@ function generate_struct_definition(
     )
 end
 
-# Multiple dispatch: Extract parameter from field (only for ParameterField)
+# Multiple dispatch: Extract parameter from field (only for DescriptorField / `::P`)
 # Mutates param_extractions and param_names
 function extract_parameter!(
     param_extractions,
     param_names,
-    field::ParameterField,
+    field::DescriptorField,
     value_ref,
 )
     field_name = Symbol("description_of_", field.name)
@@ -232,17 +235,17 @@ extract_parameter!(::Any, ::Any, ::ParametricField, _) = nothing
 extract_parameter!(::Any, ::Any, ::ConstantField, _) = nothing
 
 # Multiple dispatch: Check if field is a parameter field
-is_parameter_field(::ParameterField) = true
+is_parameter_field(::DescriptorField) = true
 is_parameter_field(::ParametricField) = false
 is_parameter_field(::ConstantField) = false
 
-# Multiple dispatch: Get parameter name (only for ParameterField)
-get_parameter_name(field::ParameterField) = field.name
+# Multiple dispatch: Get parameter name (only for DescriptorField)
+get_parameter_name(field::DescriptorField) = field.name
 get_parameter_name(::ParametricField) = nothing
 get_parameter_name(::ConstantField) = nothing
 
 # Multiple dispatch: Count fields by type using dispatch
-count_field_type(::Type{ParameterField}, fields) =
+count_field_type(::Type{DescriptorField}, fields) =
     count(f -> field_type(f) == :parameter, fields)
 count_field_type(::Type{ParametricField}, fields) =
     count(f -> field_type(f) == :parametric, fields)
@@ -282,7 +285,7 @@ end
 # Helper: Parse arguments sequentially - processes model name, fields, and body in order
 function parse_macro_arguments(model_name_expr, params_expr...)
     model_name = nothing
-    ordered_fields = Union{ParametricField,ParameterField,ConstantField}[]
+    ordered_fields = Union{ParametricField,DescriptorField,ConstantField}[]
     body = nothing
 
     # Normalize input: handle both @with_parameters(ModelName; ...) and @with_parameters ModelName; ...
@@ -424,7 +427,7 @@ macro with_parameters(model_name_expr, params_expr...)
     end
 
     # Count fields by type
-    n_params = count_field_type(ParameterField, ordered_fields)
+    n_params = count_field_type(DescriptorField, ordered_fields)
     n_parametric = count_field_type(ParametricField, ordered_fields)
 
     # Generate code
