@@ -179,34 +179,6 @@ function BuildConstructors.serialize(c::ConstructorOfBraaten; pars)
     )
 end
 
-function BuildConstructors.deserialize(::Type{<:ConstructorOfBW}, all_fields)
-    appendix = NamedTuple()
-
-    description_of_m_dict = all_fields["description_of_m"]
-    type_m = BuildConstructors._type_from_string(description_of_m_dict["type"])
-    description_of_m, appendix_m = BuildConstructors.deserialize(type_m, description_of_m_dict)
-    appendix = merge(appendix, appendix_m)
-
-    description_of_Γ_dict = all_fields["description_of_Γ"]
-    type_Γ = BuildConstructors._type_from_string(description_of_Γ_dict["type"])
-    description_of_Γ, appendix_Γ = BuildConstructors.deserialize(type_Γ, description_of_Γ_dict)
-    appendix = merge(appendix, appendix_Γ)
-
-    support = all_fields["support"] |> Tuple
-    return ConstructorOfBW(description_of_m, description_of_Γ, support), appendix
-end
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function BuildConstructors.serialize(c::ConstructorOfBW; pars)
-    LittleDict(
-        "type" => "ConstructorOfBW",
-        "description_of_m" => BuildConstructors.serialize(c.description_of_m; pars),
-        "description_of_Γ" => BuildConstructors.serialize(c.description_of_Γ; pars),
-        "support" => c.support,
-    )
-end
-
 function BuildConstructors.deserialize(::Type{<:ConstructorOfBraaten}, all_fields)
     appendix = NamedTuple()
 
@@ -224,6 +196,34 @@ function BuildConstructors.deserialize(::Type{<:ConstructorOfBraaten}, all_field
 
     support = all_fields["support"] |> Tuple
     return ConstructorOfBraaten(description_of_γre, description_of_γim, support), appendix
+end
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function BuildConstructors.serialize(c::ConstructorOfBW; pars)
+    LittleDict(
+        "type" => "ConstructorOfBW",
+        "description_of_m" => BuildConstructors.serialize(c.description_of_m; pars),
+        "description_of_Γ" => BuildConstructors.serialize(c.description_of_Γ; pars),
+        "support" => c.support,
+    )
+end
+
+function BuildConstructors.deserialize(::Type{<:ConstructorOfBW}, all_fields)
+    appendix = NamedTuple()
+
+    description_of_m_dict = all_fields["description_of_m"]
+    type_m = BuildConstructors._type_from_string(description_of_m_dict["type"])
+    description_of_m, appendix_m = BuildConstructors.deserialize(type_m, description_of_m_dict)
+    appendix = merge(appendix, appendix_m)
+
+    description_of_Γ_dict = all_fields["description_of_Γ"]
+    type_Γ = BuildConstructors._type_from_string(description_of_Γ_dict["type"])
+    description_of_Γ, appendix_Γ = BuildConstructors.deserialize(type_Γ, description_of_Γ_dict)
+    appendix = merge(appendix, appendix_Γ)
+
+    support = all_fields["support"] |> Tuple
+    return ConstructorOfBW(description_of_m, description_of_Γ, support), appendix
 end
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

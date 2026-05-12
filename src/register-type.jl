@@ -62,6 +62,7 @@ function _type_from_string(type_name::String)
         val isa Union{DataType, UnionAll} && return val
     end
     error(
-        "Unknown type '$type_name' for deserialization. Call `register!(MyType; type_name=...)` for custom types.",
+        "Type '$type_name' not found in registry or active extensions. " *
+        "Use `BuildConstructors.register!` for custom types.",
     )
 end
