@@ -1,30 +1,22 @@
 using BuildConstructors
 using Documenter
 
-DocMeta.setdocmeta!(
-    BuildConstructors,
-    :DocTestSetup,
-    quote
-        using Distributions
-        using DistributionsHEP
-        using JSON
-        using NumericalDistributions
-        using BuildConstructors
-        Ext = physics_models_extension()
-        Ext === nothing &&
-            throw(ErrorException("PhysicsModelsExt inactive in DocTestSetup."))
-    end;
-    recursive = true,
-)
+const GITHUB_REPO = "https://github.com/RUB-EP1/BuildConstructors.jl"
+
+include(joinpath(@__DIR__, "docmeta.jl"))
 
 makedocs(;
-    modules = [BuildConstructors],
-    sitename = "BuildConstructors.jl",
-    format = Documenter.HTML(;
-        prettyurls = get(ENV, "CI", "false") == "true",
-        canonical = "https://mikhailmikhasenko.github.io/BuildConstructors.jl",
+    modules=[BuildConstructors],
+    authors="Robert Hentges <robert.hentges@cern.ch> and Mikhail Mikhasenko <mikhail.mikhasenko@cern.ch>",
+    repo=GITHUB_REPO * "/blob/{commit}{path}#{line}",
+    sitename="BuildConstructors.jl",
+    doctest=true,
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://RUB-EP1.github.io/BuildConstructors.jl",
+        repolink=GITHUB_REPO,
     ),
-    pages = [
+    pages=[
         "Home" => "index.md",
         "Tutorials" => [
             "Nested Constructors" => "tutorials/nested-constructors.md",
@@ -32,11 +24,7 @@ makedocs(;
             "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
         ],
     ],
-    doctest = true,
-    checkdocs = :exports,
+    checkdocs=:exports,
 )
 
-deploydocs(;
-    repo = "github.com/mikhailmikhasenko/BuildConstructors.jl.git",
-    devbranch = "main",
-)
+deploydocs(; repo="github.com/RUB-EP1/BuildConstructors.jl.git")
