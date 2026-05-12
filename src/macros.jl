@@ -1,45 +1,3 @@
-"""
-    @with_parameters ModelName; fields... begin
-        body
-    end
-
-Generate a `ConstructorOfModelName` subtype of `AbstractConstructor` and a
-matching `build_model(::ConstructorOfModelName, pars)` method.
-
-The macro separates fields into three roles:
-
-- `field::P`: parameter descriptor field. The generated struct stores it as
-  `description_of_field`, constrained to `AbstractParameter`. Inside `body`,
-  `field` is already the resolved numeric value, computed with
-  `BuildConstructors.value(c.description_of_field; pars)`.
-- `field::SomeType`: constant field. The generated struct stores it directly with
-  the declared type. Inside `body`, access it as `_.field`.
-- `field`: parametric field. The generated struct stores it directly with an
-  inferred type parameter. This is useful for nested constructors or arbitrary
-  user objects. Inside `body`, access it as `_.field`.
-
-The generated constructor argument order is parametric fields first, parameter
-descriptor fields second, and constant fields last. This keeps all generated
-constructors predictable even when fields are declared in a mixed order.
-
-Inside `body`, parameter names such as `μ` and `σ` refer to resolved values.
-Non-parameter fields must be accessed through the placeholder `_`, for example
-`_.support` or `_.child`. This makes it visually clear which values are part of
-the constructor metadata and which values are runtime parameters.
-
-# Examples
-```julia
-@with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64} begin
-    truncated(Normal(μ, σ), _.support[1], _.support[2])
-end
-
-@with_parameters ScaleModel; D, scale::P begin
-    child = build_model(_.D, pars)
-    x -> scale * child(x)
-end
-```
-"""
-
 # Helper: Check if expression is a body block
 function is_body_block(expr)
     !(expr isa Expr) && return false
@@ -395,6 +353,47 @@ function parse_macro_arguments(model_name_expr, params_expr...)
     return model_name, ordered_fields, body
 end
 
+"""
+    @with_parameters ModelName; fields... begin
+        body
+    end
+
+Generate a `ConstructorOfModelName` subtype of `AbstractConstructor` and a
+matching `build_model(::ConstructorOfModelName, pars)` method.
+
+The macro separates fields into three roles:
+
+- `field::P`: parameter descriptor field. The generated struct stores it as
+  `description_of_field`, constrained to `AbstractParameter`. Inside `body`,
+  `field` is already the resolved numeric value, computed with
+  `BuildConstructors.value(c.description_of_field; pars)`.
+- `field::SomeType`: constant field. The generated struct stores it directly with
+  the declared type. Inside `body`, access it as `_.field`.
+- `field`: parametric field. The generated struct stores it directly with an
+  inferred type parameter. This is useful for nested constructors or arbitrary
+  user objects. Inside `body`, access it as `_.field`.
+
+The generated constructor argument order is parametric fields first, parameter
+descriptor fields second, and constant fields last. This keeps all generated
+constructors predictable even when fields are declared in a mixed order.
+
+Inside `body`, parameter names such as `μ` and `σ` refer to resolved values.
+Non-parameter fields must be accessed through the placeholder `_`, for example
+`_.support` or `_.child`. This makes it visually clear which values are part of
+the constructor metadata and which values are runtime parameters.
+
+# Examples
+```julia
+@with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64} begin
+    truncated(Normal(μ, σ), _.support[1], _.support[2])
+end
+
+@with_parameters ScaleModel; D, scale::P begin
+    child = build_model(_.D, pars)
+    x -> scale * child(x)
+end
+```
+"""
 macro with_parameters(model_name_expr, params_expr...)
     # Parse arguments sequentially: model name, fields, and body
     model_name, ordered_fields, body =
