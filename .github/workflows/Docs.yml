@@ -45,18 +45,21 @@ jobs:
         uses: julia-actions/cache@v3
         with:
           cache-name: docs
-      - run: |
+      - name: Install dependencies
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - name: Run doctests
+        run: |
           julia --color=yes --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
-          julia --color=yes --project=docs -e '
-            using Documenter: DocMeta, doctest
+            using Documenter: doctest
             using BuildConstructors
             include(joinpath("docs", "docmeta.jl"))
             doctest(BuildConstructors)'
-      - run: julia --color=yes --project=docs docs/make.jl
+      - name: Build and deploy
+        run: julia --color=yes --project=docs docs/make.jl
         env:
           JULIA_PKG_SERVER: ""
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

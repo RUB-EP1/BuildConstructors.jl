@@ -27,4 +27,7 @@ makedocs(;
     checkdocs=:exports,
 )
 
-deploydocs(; repo="github.com/RUB-EP1/BuildConstructors.jl.git")
+deploydocs(;
+    repo="github.com/RUB-EP1/BuildConstructors.jl.git",
+    devbranch="main",
+)
