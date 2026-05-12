@@ -35,3 +35,8 @@ makedocs(;
     doctest = true,
     checkdocs = :exports,
 )
+
+deploydocs(;
+    repo = "github.com/mikhailmikhasenko/BuildConstructors.jl.git",
+    devbranch = "main",
+)
