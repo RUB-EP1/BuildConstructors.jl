@@ -23,6 +23,6 @@ makedocs(;
             "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
         ],
     ],
-    doctest = false,
+    doctest = true,
     checkdocs = :exports,
 )
