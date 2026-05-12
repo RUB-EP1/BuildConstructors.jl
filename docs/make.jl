@@ -4,7 +4,16 @@ using Documenter
 DocMeta.setdocmeta!(
     BuildConstructors,
     :DocTestSetup,
-    :(using BuildConstructors);
+    quote
+        using Distributions
+        using DistributionsHEP
+        using JSON
+        using NumericalDistributions
+        using BuildConstructors
+        Ext = physics_models_extension()
+        Ext === nothing &&
+            throw(ErrorException("PhysicsModelsExt inactive in DocTestSetup."))
+    end;
     recursive = true,
 )
 

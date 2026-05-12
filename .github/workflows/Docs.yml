@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - "docs/**"
+      - "ext/**"
       - "src/**"
       - "Project.toml"
       - ".github/workflows/Docs.yml"
   pull_request:
     paths:
       - "docs/**"
+      - "ext/**"
       - "src/**"
       - "Project.toml"
       - ".github/workflows/Docs.yml"

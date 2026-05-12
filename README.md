@@ -18,6 +18,13 @@ composition, or a domain-specific type from another package. `BuildConstructors.
 does not impose a dimensionality, a call signature, or a model interface. Those
 choices stay with you.
 
+## Installation
+
+```julia
+using Pkg
+Pkg.add("BuildConstructors")
+```
+
 ## Essential vs Optional
 
 The essential pattern is small:
@@ -252,3 +259,27 @@ The repository includes several constructors for probability-model workflows,
 including the physical-resolution-background composition used in the original
 application. They are examples of the same general mechanism rather than a
 restriction on what the package can build.
+
+These examples and JSON/database helpers live in the `PhysicsModelsExt` package
+extension. Install the weak dependencies in addition to `BuildConstructors` when
+you want constructors such as `ConstructorOfBW`, `ConstructorOfGaussian`, or
+`load_prb_model_from_json`:
+
+```julia
+using Pkg
+Pkg.add([
+    "Distributions",
+    "DistributionsHEP",
+    "JSON",
+    "NumericalDistributions",
+])
+```
+
+Then load the extension dependencies before using the physics helpers:
+
+```julia
+using Distributions, DistributionsHEP, JSON, NumericalDistributions
+using BuildConstructors
+
+Phys = BuildConstructors.physics_models_extension()
+```

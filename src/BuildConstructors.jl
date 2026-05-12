@@ -1,10 +1,6 @@
 module BuildConstructors
 
-using Distributions
-using NumericalDistributions
-using DistributionsHEP
 using OrderedCollections
-using Parameters
 
 # abstract parameter type
 # and two simple primitives
@@ -25,23 +21,24 @@ export AdvancedParameter
 include("concrete-parameters.jl")
 
 export build_model
-export ConstructorOfBW
-export ConstructorOfBraaten
-export ConstructorOfCBpSECH
-export ConstructorOfGaussian
-export ConstructorOfPol1
-export ConstructorOfPol2
 include("abstract-constructor.jl")
 
 export @with_parameters
 include("macros.jl")
 
-include("primitives.jl")
+"""
+    physics_models_extension()
 
-# combined model
-export ConstructorOfPRBModel
-include("phys-res-bgd-model.jl")
+Return the `PhysicsModelsExt` module once its weak dependencies
+(`JSON`, `Distributions`, `DistributionsHEP`, `NumericalDistributions`) are loaded
+in the Julia session; otherwise return `nothing`.
 
+Built-in resonance- and resolution-style constructors (`ConstructorOfBW`, etc.)
+and JSON helpers such as `load_prb_model_from_json` are defined there.
+"""
+physics_models_extension() = Base.get_extension(@__MODULE__, :PhysicsModelsExt)
+
+export physics_models_extension
 
 # IO
 # registration mechanism
@@ -51,10 +48,5 @@ include("register-type.jl")
 export serialize
 export deserialize
 include("io.jl")
-
-# tooling
-export convert_database_to_prb
-export load_prb_model_from_json
-include("load-model-from-json.jl")
 
 end # module

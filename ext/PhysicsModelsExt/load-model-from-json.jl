@@ -51,6 +51,7 @@ constructor pattern.
 function load_prb_model_from_json(filename, phys, res, bg)
     db = JSON.parsefile(filename; dicttype = OrderedDict)
     converted = convert_database_to_prb(db, phys, res, bg)
-    constructor, starting_parameters = deserialize(ConstructorOfPRBModel, converted)
+    constructor, starting_parameters =
+        BuildConstructors.deserialize(ConstructorOfPRBModel, converted)
     return constructor, starting_parameters
 end
