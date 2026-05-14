@@ -19,7 +19,7 @@ end)
 
 @with_parameters(Mixture; left, right, f_left::P, begin
     MixtureModel(
-        [build_model(_.left, pars), build_model(_.right, pars)],
+        [build_model(left, pars), build_model(right, pars)],
         [f_left, 1 - f_left],
     )
 end)

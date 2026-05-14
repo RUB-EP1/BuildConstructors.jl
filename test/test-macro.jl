@@ -14,7 +14,7 @@ include("physics_access.jl")
     σ::P,
     support::Tuple{Float64,Float64},
     begin
-        truncated(Normal(μ, σ), _.support[1], _.support[2])
+        truncated(Normal(μ, σ), support[1], support[2])
     end
 )
 # Test instantiation - order: parametric fields, parameter fields, constant fields
@@ -51,7 +51,7 @@ end
     c1C::P,
     support::Tuple{Float64,Float64},
     begin
-        Chebyshev([1, c1C], _.support[1], _.support[2])
+        Chebyshev([1, c1C], support[1], support[2])
     end
 )
 
@@ -91,8 +91,8 @@ end
     n_bins::Int,
     begin
         # Use multiple constant fields
-        if μ > _.threshold
-            truncated(Normal(μ, σ), _.support[1], _.support[2])
+        if μ > threshold
+            truncated(Normal(μ, σ), support[1], support[2])
         else
             # Use n_bins for something
             Normal(μ, σ)
@@ -113,7 +113,12 @@ end
 
 # Test Case 5: Parametric fields (fields without type annotations)
 @with_parameters(ScaleMacro; D, scale::P, begin
-    build_model(_.D, pars) * scale
+    build_model(D, pars) * scale
+end)
+
+# Bare `D` works when `D` is a typed constant slot (`field::SomeType`).
+@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, begin
+    build_model(D, pars) * scale
 end)
 
 @testset "Macro with parametric fields" begin
@@ -125,6 +130,15 @@ end)
     )
     @test cs.D isa ConstructorOfGaussian
     @test cs.description_of_scale isa Fixed
+    model = build_model(cs, NamedTuple())
+    @test model isa Distribution
+    @test pdf(model, 0.0) > 0
+end
+
+@testset "Macro constant slot: bare field name" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    # Argument order: descriptor fields, then constant fields.
+    cs = ConstructorOfScaleMacroConstD(Fixed(2.0), inner)
     model = build_model(cs, NamedTuple())
     @test model isa Distribution
     @test pdf(model, 0.0) > 0
@@ -144,33 +158,16 @@ end
         return err
     end
 
-    # Test: Field used directly (not via _.field) should fail
-    err1 = test_macro_error(
-        :(@with_parameters(
-            ScaleMacro2;
-            D::AbstractConstructor,
-            scale::P,
-            begin
-                build_model(D) * scale  # Should use _.D
-            end
-        )),
-        "_.field_name",
-    )
-    @test err1 !== nothing
-    @test err1 isa ErrorException
-    @test occursin("_.field_name", string(err1)) ||
-          occursin("must be accessed", string(err1))
-
-    # Test: Field used via _.field but not declared should fail
+    # Test: build_model(D, pars) with undeclared D should fail at macro expansion
     err2 = test_macro_error(
         :(@with_parameters(ScaleMacro3; scale::P, begin
-            build_model(_.D) * scale  # D not declared
+            build_model(D, pars) * scale
         end)),
         "not declared",
     )
     @test err2 !== nothing
     @test err2 isa ErrorException
-    @test occursin("not declared", string(err2)) || occursin("Please declare", string(err2))
+    @test occursin("not declared", string(err2)) || occursin("Declare", string(err2))
 end
 
 println("All macro tests passed!")

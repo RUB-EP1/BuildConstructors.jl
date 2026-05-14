@@ -39,6 +39,7 @@ using DistributionsHEP
 using JSON
 using NumericalDistributions
 include("physics_access.jl")
+include("test-macro.jl")
 
 @testset "BuildConstructors tests" begin
     # let # to be replaced by the line above once working

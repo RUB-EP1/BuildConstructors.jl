@@ -18,7 +18,7 @@ end
 
 # Parsed field roles for `@with_parameters` (same payload shape, different lowering — kept
 # as distinct types so dispatch selects struct generation and build_model extraction).
-"""Bare `field` in the macro list → struct slot `field::Pi` (unconstrained type param); use `_.field` in the body."""
+"""Bare `field` in the macro list → struct slot `field::Pi` (unconstrained type param); in the body use bare `field`."""
 struct ParametricField
     name::Symbol
 end
@@ -60,51 +60,31 @@ function parse_field(expr)
     end
 end
 
-# Helper: Find all field usages (_.field_name) in expression tree and transform to c.field_name
-# Also validates that fields are accessed via _.field pattern, not directly
-function find_field_usages(expr, all_declared_fields, param_names)
-    used_fields = Set{Symbol}()
-    invalid_usages = Symbol[]  # Fields used directly without _.field pattern
-
-    function traverse_and_transform(e)
+# `build_model(child, pars)` must use a declared field name as `child` when it is a plain symbol.
+function validate_build_model_nested_refs(expr, declared_fields::Set{Symbol})
+    function walk(e)
         if e isa Expr
-            # Check for _.field_name pattern and transform to c.field_name
-            if e.head == :. && length(e.args) == 2
-                if e.args[1] == :_ && e.args[2] isa QuoteNode
-                    field_name = e.args[2].value
-                    if field_name isa Symbol
-                        push!(used_fields, field_name)
-                        # Transform _.field to c.field
-                        e.args[1] = :c
-                    end
+            if e.head === :call &&
+               length(e.args) == 3 &&
+               e.args[1] === :build_model &&
+               e.args[3] === :pars
+                nest = e.args[2]
+                if nest isa Symbol && !(nest in declared_fields)
+                    error(
+                        "@with_parameters: `build_model($(nest), pars)` uses `$(nest)`, which is not declared in the field list. " *
+                        "Declare it as $(nest), $(nest)::P, or $(nest)::Type.",
+                    )
                 end
             end
-            # Recursively traverse all sub-expressions
             for arg in e.args
-                traverse_and_transform(arg)
+                walk(arg)
             end
-        elseif e isa Symbol
-            # Check if this symbol is a declared field being used directly (invalid)
-            # But ignore if it's a parameter name (those are valid)
-            if e in all_declared_fields && !(e in param_names)
-                push!(invalid_usages, e)
-            end
+        elseif e isa QuoteNode && e.value isa Expr
+            walk(e.value)
         end
     end
-
-    traverse_and_transform(expr)
-
-    # Report invalid usages
-    if !isempty(invalid_usages)
-        unique_invalid = unique(invalid_usages)
-        field_list = join(["'$(f)'" for f in unique_invalid], ", ")
-        error(
-            "Field(s) $field_list are used directly but must be accessed via '_.field_name' pattern. " *
-            "For example, use '_.$(unique_invalid[1])' instead of '$(unique_invalid[1])'",
-        )
-    end
-
-    return used_fields
+    walk(expr)
+    return nothing
 end
 
 # Helper: Generate type parameters for struct
@@ -149,37 +129,32 @@ end
 
 function add_struct_field!(struct_fields, field::ConstantField, _)
     push!(struct_fields.args, Expr(:(::), field.name, field.type_expr))
-    return nothing  # No index to update
+    return nothing  # unused index slot for ConstantField
 end
 
-# Multiple dispatch: Check field type for filtering
-field_type(::ParametricField) = :parametric
-field_type(::DescriptorField) = :parameter
-field_type(::ConstantField) = :constant
-
 # Helper: Generate struct fields in reordered format: parametric first, then parameters, then constants
-function generate_struct_fields(ordered_fields, param_type_params, parametric_type_params)
+function generate_struct_fields(ordered_fields)
     struct_fields = Expr(:block)
 
     # Track indices for type parameters
     param_idx = 1
     parametric_idx = 1
 
-    # First pass: add parametric fields
+    # Parametric fields (declaration order)
     for field in ordered_fields
-        field_type(field) == :parametric &&
+        field isa ParametricField &&
             (parametric_idx = add_struct_field!(struct_fields, field, parametric_idx))
     end
 
-    # Second pass: add parameter fields
+    # Descriptor fields (`::P`)
     for field in ordered_fields
-        field_type(field) == :parameter &&
+        field isa DescriptorField &&
             (param_idx = add_struct_field!(struct_fields, field, param_idx))
     end
 
-    # Third pass: add constant fields
+    # Typed constant fields
     for field in ordered_fields
-        field_type(field) == :constant && add_struct_field!(struct_fields, field, nothing)
+        field isa ConstantField && add_struct_field!(struct_fields, field, nothing)
     end
 
     return struct_fields
@@ -205,16 +180,9 @@ function generate_struct_definition(
     )
 end
 
-# Multiple dispatch: Extract parameter from field (only for DescriptorField / `::P`)
-# Mutates param_extractions and param_names
-function extract_parameter!(
-    param_extractions,
-    param_names,
-    field::DescriptorField,
-    value_ref,
-)
+# Multiple dispatch: Extract parameter value for DescriptorField (`::P`)
+function extract_parameter!(param_extractions, field::DescriptorField, value_ref)
     field_name = Symbol("description_of_", field.name)
-    push!(param_names, field.name)
     push!(
         param_extractions.args,
         Expr(
@@ -231,42 +199,31 @@ function extract_parameter!(
     return nothing
 end
 
-extract_parameter!(::Any, ::Any, ::ParametricField, _) = nothing
-extract_parameter!(::Any, ::Any, ::ConstantField, _) = nothing
+extract_parameter!(::Any, ::ParametricField, ::Any) = nothing
+extract_parameter!(::Any, ::ConstantField, ::Any) = nothing
 
-# Multiple dispatch: Check if field is a parameter field
-is_parameter_field(::DescriptorField) = true
-is_parameter_field(::ParametricField) = false
-is_parameter_field(::ConstantField) = false
+function add_slot_bindings!(bindings_block, field::Union{ParametricField, ConstantField})
+    push!(bindings_block.args, Expr(:(=), field.name, Expr(:., :c, QuoteNode(field.name))))
+    return nothing
+end
+add_slot_bindings!(::Any, ::DescriptorField) = nothing
 
-# Multiple dispatch: Get parameter name (only for DescriptorField)
-get_parameter_name(field::DescriptorField) = field.name
-get_parameter_name(::ParametricField) = nothing
-get_parameter_name(::ConstantField) = nothing
-
-# Multiple dispatch: Count fields by type using dispatch
-count_field_type(::Type{DescriptorField}, fields) =
-    count(f -> field_type(f) == :parameter, fields)
-count_field_type(::Type{ParametricField}, fields) =
-    count(f -> field_type(f) == :parametric, fields)
+# Multiple dispatch: Count fields by type
+count_descriptor_fields(fields) = count(f -> f isa DescriptorField, fields)
+count_parametric_fields(fields) = count(f -> f isa ParametricField, fields)
 
 # Helper: Generate build_model function
 function generate_build_model_function(constructor_name, ordered_fields, body)
     value_ref = Expr(:., :BuildConstructors, QuoteNode(:value))
 
-    # Extract parameters: param = value(c.description_of_{param}; pars)
-    param_extractions = Expr(:block)
-    param_names = Symbol[]
-
+    # Descriptor locals: param = value(c.description_of_{param}; pars)
+    build_model_body = Expr(:block)
     for field in ordered_fields
-        extract_parameter!(param_extractions, param_names, field, value_ref)
+        add_slot_bindings!(build_model_body, field)
+        extract_parameter!(build_model_body, field, value_ref)
     end
 
-    # Combine parameter extractions with user body
-    build_model_body = Expr(:block)
-    append!(build_model_body.args, param_extractions.args)
-
-    # Add user body
+    # User body
     if body isa Expr && body.head == :block
         append!(build_model_body.args, body.args)
     else
@@ -371,28 +328,27 @@ The macro separates fields into three roles:
   `field` is already the resolved numeric value, computed with
   `BuildConstructors.value(c.description_of_field; pars)`.
 - `field::SomeType`: constant field. The generated struct stores it directly with
-  the declared type. Inside `body`, access it as `_.field`.
+  the declared type. Inside `body`, use bare `field`.
 - `field`: parametric field. The generated struct stores it directly with an
   inferred type parameter. This is useful for nested constructors or arbitrary
-  user objects. Inside `body`, access it as `_.field`.
+  user objects. Inside `body`, use bare `field`.
 
 The generated constructor argument order is parametric fields first, parameter
 descriptor fields second, and constant fields last. This keeps all generated
 constructors predictable even when fields are declared in a mixed order.
 
-Inside `body`, parameter names such as `μ` and `σ` refer to resolved values.
-Non-parameter fields must be accessed through the placeholder `_`, for example
-`_.support` or `_.child`. This makes it visually clear which values are part of
-the constructor metadata and which values are runtime parameters.
+Inside `body`, every field name from the header is a local binding: parameter
+descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
+constant fields are read from `c`. Only those names appear as locals together with `pars`.
 
 # Examples
 ```julia
 @with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64} begin
-    truncated(Normal(μ, σ), _.support[1], _.support[2])
+    truncated(Normal(μ, σ), support[1], support[2])
 end
 
 @with_parameters ScaleModel; D, scale::P begin
-    child = build_model(_.D, pars)
+    child = build_model(D, pars)
     x -> scale * child(x)
 end
 ```
@@ -402,41 +358,18 @@ macro with_parameters(model_name_expr, params_expr...)
     model_name, ordered_fields, body =
         parse_macro_arguments(model_name_expr, params_expr...)
 
-    # Collect all declared field names and parameter names
-    all_declared_fields = Set{Symbol}()
-    param_names = Symbol[]
+    declared_fields = Set(f.name for f in ordered_fields)
+    validate_build_model_nested_refs(body, declared_fields)
 
-    for field in ordered_fields
-        push!(all_declared_fields, field.name)
-        param_name = get_parameter_name(field)
-        param_name !== nothing && push!(param_names, param_name)
-    end
-
-    # Validate field usages in body
-    param_names_set = Set(param_names)
-    used_fields = find_field_usages(body, all_declared_fields, param_names_set)
-
-    # Check that all used fields are declared
-    for field in used_fields
-        if !(field in all_declared_fields)
-            error(
-                "Field '$(field)' is used in the body but not declared. " *
-                "Please declare it: $(field), $(field)::P, or $(field)::Type",
-            )
-        end
-    end
-
-    # Count fields by type
-    n_params = count_field_type(DescriptorField, ordered_fields)
-    n_parametric = count_field_type(ParametricField, ordered_fields)
+    n_descriptor = count_descriptor_fields(ordered_fields)
+    n_parametric = count_parametric_fields(ordered_fields)
 
     # Generate code
     constructor_name = Symbol("ConstructorOf", model_name)
 
     param_type_params, parametric_type_params =
-        generate_type_parameters(n_params, n_parametric)
-    struct_fields =
-        generate_struct_fields(ordered_fields, param_type_params, parametric_type_params)
+        generate_type_parameters(n_descriptor, n_parametric)
+    struct_fields = generate_struct_fields(ordered_fields)
     struct_def = generate_struct_definition(
         constructor_name,
         param_type_params,
