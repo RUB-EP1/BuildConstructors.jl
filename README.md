@@ -198,7 +198,12 @@ field = BuildConstructors.value(c.description_of_field; pars)
 ```
 
 For `field::SomeType` and plain `field`, the macro binds `field = c.field` before the body.
-Every name in the field list is therefore available as a local variable alongside `pars`.
+Every name in the field list is therefore available as a local variable in the body.
+
+The name `pars` is separate from that list: it always refers to the second argument of
+the generated `build_model(c, pars)`, i.e. the caller-supplied parameter bundle. Forward
+it unchanged when composing nested constructors (`build_model(child, pars)`) so inner
+`build_model` methods see the same parameters.
 
 For example:
 

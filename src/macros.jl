@@ -312,8 +312,17 @@ constructors predictable even when fields are declared in a mixed order.
 
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
-constant fields are read from `c`. Those names appear as locals together with `pars`
-and with any other bindings normal Julia rules allow (e.g. loop variables).
+constant fields are read from `c`.
+
+The name `pars` does not appear in the field list; it is fixed by the macro as the
+second argument of the generated `build_model(c, pars)`. That value is whatever the
+caller supplied as the second argument when building this constructor (the same role
+as `pars` throughout `build_model` in this package). When you call `build_model` on a
+nested constructor inside `body`, pass that object through as the second argument —
+typically `build_model(inner, pars)` — so inner constructors resolve parameters against
+the same container.
+
+Other locals follow normal Julia scoping (e.g. loop variables).
 
 # Examples
 ```julia
