@@ -1,7 +1,7 @@
 using Test
 using BuildConstructors
 
-@with_parameters(AffineCore; slope::P, intercept::P, pars -> begin
+@with_parameters(AffineCore; slope::P, intercept::P, other_pars -> begin
     x -> slope * x + intercept
 end)
 

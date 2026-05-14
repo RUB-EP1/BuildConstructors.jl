@@ -13,7 +13,7 @@ include("physics_access.jl")
     μ::P,
     σ::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         truncated(Normal(μ, σ), support[1], support[2])
     end
 )
@@ -50,7 +50,7 @@ end
     Pol1Macro;
     c1C::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         Chebyshev([1, c1C], support[1], support[2])
     end
 )
@@ -67,7 +67,7 @@ cp1_manual = ConstructorOfPol1(Running("c1C"), (1.1, 2.5))
 end
 
 # Test Case 3: Complex parameter names (no support field needed)
-@with_parameters(TestModelMacro; γre::P, γim::P, pars -> begin
+@with_parameters(TestModelMacro; γre::P, γim::P, other_pars -> begin
     # Simple test - just return a number for now
     γre + γim
 end)
@@ -89,7 +89,7 @@ end
     support::Tuple{Float64,Float64},
     threshold::Float64,
     n_bins::Int,
-    pars -> begin
+    other_pars -> begin
         # Use multiple constant fields
         if μ > threshold
             truncated(Normal(μ, σ), support[1], support[2])
@@ -112,16 +112,16 @@ cm = ConstructorOfComplexModel(Fixed(0.0), Fixed(0.1), (-0.5, 0.5), 0.0, 10)
 end
 
 # Test Case 5: Parametric fields (fields without type annotations)
-@with_parameters(ScaleMacro; D, scale::P, pars -> begin
-    build_model(D, pars) * scale
+@with_parameters(ScaleMacro; D, scale::P, other_pars -> begin
+    build_model(D, other_pars) * scale
 end)
 
 # Bare `D` works when `D` is a typed constant slot (`field::SomeType`).
-@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, pars -> begin
-    build_model(D, pars) * scale
+@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, other_pars -> begin
+    build_model(D, other_pars) * scale
 end)
 
-# Explicit `θ ->`: same semantics as ScaleMacro (`build_model` second argument renamed).
+# Alternate binder (`p ->`): same semantics; still forwards via `value(...; pars=p)`.
 @with_parameters(LambdaRenamed; D, scale::P, p -> begin
     build_model(D, p) * scale
 end)
@@ -165,9 +165,9 @@ end
     @test pdf(model, 0.0) > 0
 end
 
-# Regression: no static check on `build_model(m, pars)` — `m` is a loop variable, not a field.
-@with_parameters(BatchMacro; models, pars -> begin
-    [build_model(m, pars) for m in models]
+# Regression: no static check on `build_model(m, other_pars)` — `m` is a loop variable, not a field.
+@with_parameters(BatchMacro; models, other_pars -> begin
+    [build_model(m, other_pars) for m in models]
 end)
 
 @testset "build_model in comprehension uses non-field locals" begin
@@ -180,8 +180,8 @@ end)
 end
 
 # PR-review-style example: constant field typed as `Vector`, comprehension binds `m` locally.
-@with_parameters(Sum; models::Vector, pars -> begin
-    [build_model(m, pars) for m in models]
+@with_parameters(Sum; models::Vector, other_pars -> begin
+    [build_model(m, other_pars) for m in models]
 end)
 
 @testset "build_model in comprehension with models::Vector slot" begin

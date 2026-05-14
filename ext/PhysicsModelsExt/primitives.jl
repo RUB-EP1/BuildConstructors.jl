@@ -4,7 +4,7 @@
     m::P,
     Γ::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         NumericallyIntegrable(e->1/abs2(m^2-e^2 - 1im*m*Γ), support)
     end
 )
@@ -14,7 +14,7 @@
     γre::P,
     γim::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         μ = 0.9666176144464419 # reduced mass of D0 and D*0 in GeV/c^2
         k1(E::Complex) = 1im * sqrt(-2μ * (E * 1e-3))
         k1(E::Real) = k1(E + 1e-7im)
@@ -31,7 +31,7 @@
     μ::P,
     σ::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         truncated(Normal(μ, σ), support[1], support[2])
     end
 )
@@ -48,7 +48,7 @@
     fr1::P,
     w::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         σ2 = s * σ1
         σ1_MeV, σ2_MeV = (σ1, σ2) .* 1e3
         α = c0 * (c1 * σ1)^c2 / (1 + (c1 * σ1)^c2)
@@ -71,7 +71,7 @@
     Pol1;
     c1C::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         Chebyshev([1, c1C], support[1], support[2])
     end
 )
@@ -83,7 +83,7 @@
     c1C::P,
     c2C::P,
     support::Tuple{Float64,Float64},
-    pars -> begin
+    other_pars -> begin
         Chebyshev([1, c1C, c2C], support[1], support[2])
     end
 )

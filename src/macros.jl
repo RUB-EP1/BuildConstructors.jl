@@ -21,7 +21,7 @@ end
 function parse_model_body_syntax(expr::Expr)
     if expr.head !== :(->)
         error(
-            "@with_parameters requires the model body as a unary lambda, e.g. `pars -> begin ... end` (rename `pars` freely). Got: `$expr`",
+            "@with_parameters requires the model body as a unary lambda, e.g. `other_pars -> begin ... end`. Got: `$expr`",
         )
     end
     length(expr.args) == 2 ||
@@ -34,7 +34,7 @@ end
 
 function parse_model_body_syntax(::Any)
     error(
-        "@with_parameters requires the model body as a unary lambda (`pars -> expr` or `pars -> begin ... end`).",
+        "@with_parameters requires the model body as a unary lambda (`other_pars -> expr` or `other_pars -> begin ... end`).",
     )
 end
 
@@ -42,14 +42,14 @@ function parse_lambda_lhs(lhs)
     lhs isa Symbol && return lhs
     lhs isa Expr && lhs.head == :tuple &&
         error(
-            "@with_parameters: parameter binding must be a single name (e.g. `p -> ...`), not a tuple destructuring.",
+            "@with_parameters: parameter binding must be a single name (e.g. `other_pars -> ...`), not a tuple destructuring.",
         )
     if lhs isa Expr && lhs.head == :(::)
         error(
             "@with_parameters: do not type-annotate the `build_model` parameter (use `θ ->`, not `θ::SomeType ->`); values may be NamedTuples, ComponentArrays, or other types.",
         )
     end
-    error("@with_parameters: parameter binding must be a single symbol (e.g. `θ -> ...`); got `$lhs`")
+    error("@with_parameters: parameter binding must be a single symbol (e.g. `other_pars -> ...`); got `$lhs`")
 end
 
 # Parsed field roles for `@with_parameters` (same payload shape, different lowering — kept
@@ -279,7 +279,7 @@ function parse_macro_arguments(model_name_expr, params_expr...)
             args_to_process = model_name_expr.args
         else
             error(
-                "@with_parameters: model name missing. Expected `@with_parameters(ModelName; fields..., pars -> begin ... end)`.",
+                "@with_parameters: model name missing. Expected `@with_parameters(ModelName; fields..., other_pars -> begin ... end)`.",
             )
         end
     elseif model_name_expr isa Symbol
@@ -295,13 +295,13 @@ function parse_macro_arguments(model_name_expr, params_expr...)
         # Skip line number nodes
         arg isa LineNumberNode && continue
 
-        # Model body: unary lambda `pars -> expr` / `pars -> begin ... end`.
+        # Model body: unary lambda `binder -> expr` (docs use `other_pars` as the typical binder name).
         if arg isa Expr && arg.head == :(->)
             pars_sym, body = parse_model_body_syntax(arg)
             break
         elseif looks_like_plain_body(arg)
             error(
-                "@with_parameters: use a unary lambda for the model body, e.g. `pars -> begin ... end`, not a bare `begin ... end` block.",
+                "@with_parameters: use a unary lambda for the model body, e.g. `other_pars -> begin ... end`, not a bare `begin ... end` block.",
             )
         end
 
@@ -315,7 +315,7 @@ function parse_macro_arguments(model_name_expr, params_expr...)
                     break
                 elseif looks_like_plain_body(field_expr)
                     error(
-                        "@with_parameters: use a unary lambda for the model body, e.g. `pars -> begin ... end`, not a bare `begin ... end` block.",
+                        "@with_parameters: use a unary lambda for the model body, e.g. `other_pars -> begin ... end`, not a bare `begin ... end` block.",
                     )
                 else
                     field = parse_field(field_expr)
@@ -336,7 +336,7 @@ function parse_macro_arguments(model_name_expr, params_expr...)
     # Validation
     if body === nothing
         error(
-            "@with_parameters requires a model body unary lambda (`pars -> expr` or `pars -> begin ... end`), with a plain symbol before `->` (no type annotation).",
+            "@with_parameters requires a model body unary lambda (`other_pars -> expr` or `other_pars -> begin ... end`), with a plain symbol before `->` (no type annotation).",
         )
     end
     if isempty(ordered_fields)
@@ -353,11 +353,12 @@ end
     end
 
 Generate a `ConstructorOfModelName` subtype of `AbstractConstructor` and a
-matching `build_model(::ConstructorOfModelName, binder)` method: `binder` is the
-parameter-values argument (often named `pars`).
+matching `build_model(::ConstructorOfModelName, binder)` method. Documentation
+examples typically name `binder` **`other_pars`** so it reads as the runtime values
+object threaded through `build_model`; you may choose any plain symbol.
 
 The body must always be written as **one unary anonymous function**.
-Use `pars -> begin ... end` by convention when you prefer the conventional name.
+Use `other_pars -> begin ... end` in docs and examples for clarity.
 
 The macro separates fields into three roles:
 
@@ -383,12 +384,12 @@ Tuple-destructuring for `binder` is not supported.
 
 # Examples
 ```julia
-@with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64}, pars -> begin
+@with_parameters Gaussian; μ::P, σ::P, support::Tuple{Float64,Float64}, other_pars -> begin
     truncated(Normal(μ, σ), support[1], support[2])
 end
 
-@with_parameters ScaleModel; D, scale::P, pars -> begin
-    child = build_model(D, pars)
+@with_parameters ScaleModel; D, scale::P, other_pars -> begin
+    child = build_model(D, other_pars)
     x -> scale * child(x)
 end
 

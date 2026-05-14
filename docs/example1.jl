@@ -6,22 +6,22 @@ using Plots
 
 theme(:boxed)
 
-# Flexible models via @with_parameters: each `@with_parameters` body is lowered from
-# `pars -> ...` into `build_model(::Constructor..., pars)`.
-@with_parameters(Gauss; μ::P, σ::P, pars -> begin Normal(μ, σ) end)
+# Flexible models via `@with_parameters`: each body is `other_pars -> ...`, lowered to
+# `build_model(::Constructor..., other_pars)` (with `value(...; pars = other_pars)` for `::P` fields).
+@with_parameters(Gauss; μ::P, σ::P, other_pars -> begin Normal(μ, σ) end)
 @with_parameters(NormalizeAbs2Abs2; D, support::Tuple{Float64,Float64},
-    pars -> begin
-        NumericallyIntegrable(e->abs2(build_model(D, pars)(e^2)), support)
+    other_pars -> begin
+        NumericallyIntegrable(e->abs2(build_model(D, other_pars)(e^2)), support)
     end)
-@with_parameters(BW; m::P, Γ::P, pars -> begin BreitWigner(m, Γ) end)
-@with_parameters(Cut; cModel, support::Tuple{Float64,Float64}, pars -> begin truncated(build_model(cModel, pars), support[1], support[2]) end)
-@with_parameters(S; cModel, scale::P, pars -> begin build_model(cModel, pars) * scale end)
+@with_parameters(BW; m::P, Γ::P, other_pars -> begin BreitWigner(m, Γ) end)
+@with_parameters(Cut; cModel, support::Tuple{Float64,Float64}, other_pars -> begin truncated(build_model(cModel, other_pars), support[1], support[2]) end)
+@with_parameters(S; cModel, scale::P, other_pars -> begin build_model(cModel, other_pars) * scale end)
 @with_parameters(Comb;
     cModel1,
     cModel2,
     weight::P,
-    pars -> begin
-        MixtureModel([build_model(cModel1, pars), build_model(cModel2, pars)], [weight, 1-weight])
+    other_pars -> begin
+        MixtureModel([build_model(cModel1, other_pars), build_model(cModel2, other_pars)], [weight, 1-weight])
     end
 )
 

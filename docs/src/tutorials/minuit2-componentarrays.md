@@ -7,7 +7,7 @@ the vector passed through the Minuit callback. When the starting point is a
 parameters.
 
 The mixture setup matches the [Nested Constructors](@ref)
-tutorial (`pars -> begin ... end` syntax).
+tutorial (`other_pars -> begin ... end` syntax).
 
 ```julia
 using BuildConstructors
@@ -16,13 +16,13 @@ using Distributions
 using Minuit2
 using Random
 
-@with_parameters(Gauss; μ::P, σ::P, pars -> begin
+@with_parameters(Gauss; μ::P, σ::P, other_pars -> begin
     Normal(μ, σ)
 end)
 
-@with_parameters(Mixture; left, right, f_left::P, pars -> begin
+@with_parameters(Mixture; left, right, f_left::P, other_pars -> begin
     MixtureModel(
-        [build_model(left, pars), build_model(right, pars)],
+        [build_model(left, other_pars), build_model(right, other_pars)],
         [f_left, 1 - f_left],
     )
 end)

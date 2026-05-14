@@ -40,7 +40,7 @@ Everything else is convenience:
 | --- | --- | --- |
 | `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Useful defaults | Common descriptor types for fixed/free parameters, defaults, bounds, and uncertainties. |
 | `running_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
-| `@with_parameters` | Convenience | Generates struct + `build_model` from a field list ended by **`binder ->`** (typically `pars -> begin ... end`). |
+| `@with_parameters` | Convenience | Generates struct + `build_model` from a field list ending with **`other_pars -> ...`** (or any binder name; docs use **`other_pars`** to mirror the runtime second argument). |
 | `serialize` / `deserialize` / `register!` | Optional | Save and restore constructor descriptions through JSON or database-like workflows. |
 | PRB model constructors and loaders | Optional example | Domain-specific probability-model utilities built with the same general mechanism. |
 
@@ -162,31 +162,32 @@ For many simple wrappers, the `@with_parameters` macro generates the constructor
 2. A comma-separated field list after the semicolon (`field`, `field::P`, or `field::SomeType`; see below).
 3. A **unary lambda** as the last item: **`binder -> expr`** or **`binder -> begin ... end`**.
 
-`binder` is the local name for the generated `build_model` second argument. By convention it is **`pars`** (matching the `value(...; pars)` keyword elsewhere), but `θ`, `p`, or any unused symbol works. Use a plain symbol — **never** annotate it (`θ::NamedTuple`). Runtime parameter values may be named tuples, `ComponentArray`s, or anything else your descriptors support.
+`binder` is the local name for the generated **`build_model` second argument**. Documentation examples use **`other_pars`** so it is explicit that this is the same values object callers pass into `build_model(constructor, ...)` and into nested calls. You may pick another symbol (`theta`, ...); **`value`** still receives it via keyword **`pars`** (`pars = binder`).
 
-Minimal example (`pars ->` convention):
+Minimal example (`other_pars ->` convention):
 
 ```julia
 using BuildConstructors
 using Distributions
 
-@with_parameters(Gauss; μ::P, σ::P, pars -> begin
+@with_parameters(Gauss; μ::P, σ::P, other_pars -> begin
     Normal(μ, σ)
 end)
 
 c = ConstructorOfGauss(Fixed(0.0), Running("σ"))
-model = build_model(c, (σ = 0.2,))
+pars = (σ = 0.2,)
+model = build_model(c, pars)
 ```
 
-Same method with another binder name:
+Any plain binder works (passed as the second positional argument):
 
 ```julia
 @with_parameters(Gauss; μ::P, σ::P, θ -> begin
-    Normal(μ, σ)  # `build_model` is lowered as `(_, θ)`, nested calls use `(child, θ)`
+    Normal(μ, σ)  # nested: `build_model(child, θ)`
 end)
 ```
 
-The generated type is `ConstructorOf{Name}` (here `ConstructorOfGauss`). For `field::P`, structs store **`description_of_field`**; numeric values are injected before the RHS of the arrow via `BuildConstructors.value(...; pars = binder)`. For typed or parametric slots, bindings are **`field = c.field`**.
+The generated type is `ConstructorOf{Name}` (here `ConstructorOfGauss`). For `field::P`, structs store **`description_of_field`**; numeric values are injected before the RHS via `BuildConstructors.value(...; pars = binder)` (keyword **`pars`** is fixed by that API). Typed or parametric slots use **`field = c.field`**.
 
 Field forms:
 
@@ -199,8 +200,8 @@ Field forms:
 Scaled wrapper:
 
 ```julia
-@with_parameters(Scaled; child, scale::P, pars -> begin
-    child_model = build_model(child, pars)
+@with_parameters(Scaled; child, scale::P, other_pars -> begin
+    child_model = build_model(child, other_pars)
     x -> scale * child_model(x)
 end)
 ```
@@ -212,8 +213,8 @@ c = ConstructorOfScaled(child_constructor, Running("scale"))
 Field reordering in generated constructors (stable): plain parametric fields first, then `::P` descriptors, then typed constants. Mixed declaration:
 
 ```julia
-@with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, pars -> begin
-    truncated(build_model(model, pars), support[1] + μ, support[2] + μ)
+@with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, other_pars -> begin
+    truncated(build_model(model, other_pars), support[1] + μ, support[2] + μ)
 end)
 ```
 
@@ -221,7 +222,7 @@ end)
 ConstructorOfWindowed(model, μ_descriptor, support)
 ```
 
-Bare `begin ... end` without `pars ->` is **not** accepted; always write **one unary lambda** last.
+Bare `begin ... end` without **`binder ->`** is **not** accepted.
 
 Use the macro when that generated shape is clear and useful. Write the constructor
 and `build_model` by hand when you need a custom field order, extra validation,

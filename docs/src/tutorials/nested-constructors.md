@@ -13,19 +13,19 @@ only describes how to assemble it.
 using BuildConstructors
 using Distributions
 
-@with_parameters(Gauss; μ::P, σ::P, pars -> begin
+@with_parameters(Gauss; μ::P, σ::P, other_pars -> begin
     Normal(μ, σ)
 end)
 
-@with_parameters(Mixture; left, right, f_left::P, pars -> begin
+@with_parameters(Mixture; left, right, f_left::P, other_pars -> begin
     MixtureModel(
-        [build_model(left, pars), build_model(right, pars)],
+        [build_model(left, other_pars), build_model(right, other_pars)],
         [f_left, 1 - f_left],
     )
 end)
 ```
 
-The last argument must be a unary lambda; `pars ->` binds the argument passed through to nested `build_model` calls (`θ ->` instead of `pars ->` works the same).
+The last argument must be a unary lambda. Examples bind that argument as **`other_pars`**—the same runtime object callers pass into `build_model` (often held in an outer variable still named **`pars`**). Any plain symbol (`theta`, ...) works.
 
 The plain fields `left` and `right` are child constructors. The `f_left::P` field
 is a parameter descriptor, so its resolved value is available as `f_left` inside
@@ -76,5 +76,5 @@ release!(constructor, (:σ_left, :σ_right))
 ```
 
 The pattern scales to deeper trees. A parent constructor does not need to know the
-concrete type of each child; it only needs to call `build_model(child, pars)` at
-the point where the final domain object is assembled.
+concrete type of each child; it only needs to call `build_model(child, other_pars)` at
+the point where the final domain object is assembled (`other_pars` is whatever was passed into the parent `build_model`).
