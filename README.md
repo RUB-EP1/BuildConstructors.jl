@@ -40,7 +40,7 @@ Everything else is convenience:
 | --- | --- | --- |
 | `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Useful defaults | Common descriptor types for fixed/free parameters, defaults, bounds, and uncertainties. |
 | `running_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
-| `@with_parameters` | Convenience | Removes boilerplate when a constructor mostly maps parameter descriptors into a `build_model` body. |
+| `@with_parameters` | Convenience | Generates struct + `build_model` from a field list ended by **`binder ->`** (typically `pars -> begin ... end`). |
 | `serialize` / `deserialize` / `register!` | Optional | Save and restore constructor descriptions through JSON or database-like workflows. |
 | PRB model constructors and loaders | Optional example | Domain-specific probability-model utilities built with the same general mechanism. |
 
@@ -156,14 +156,21 @@ with `scale`.
 
 ## Less Boilerplate With `@with_parameters`
 
-For many simple wrappers, the `@with_parameters` macro generates the constructor
-type and `build_model` method for you:
+For many simple wrappers, the `@with_parameters` macro generates the constructor type and `build_model` method for you. The macro call has:
+
+1. The model name, e.g. `Gauss`.
+2. A comma-separated field list after the semicolon (`field`, `field::P`, or `field::SomeType`; see below).
+3. A **unary lambda** as the last item: **`binder -> expr`** or **`binder -> begin ... end`**.
+
+`binder` is the local name for the generated `build_model` second argument. By convention it is **`pars`** (matching the `value(...; pars)` keyword elsewhere), but `θ`, `p`, or any unused symbol works. Use a plain symbol — **never** annotate it (`θ::NamedTuple`). Runtime parameter values may be named tuples, `ComponentArray`s, or anything else your descriptors support.
+
+Minimal example (`pars ->` convention):
 
 ```julia
 using BuildConstructors
 using Distributions
 
-@with_parameters(Gauss; μ::P, σ::P, begin
+@with_parameters(Gauss; μ::P, σ::P, pars -> begin
     Normal(μ, σ)
 end)
 
@@ -171,66 +178,50 @@ c = ConstructorOfGauss(Fixed(0.0), Running("σ"))
 model = build_model(c, (σ = 0.2,))
 ```
 
-The macro call has three parts:
+Same method with another binder name:
 
-1. The model name, `Gauss`.
-2. A field list after the semicolon.
-3. A `begin ... end` body that returns the final object.
+```julia
+@with_parameters(Gauss; μ::P, σ::P, θ -> begin
+    Normal(μ, σ)  # `build_model` is lowered as `(_, θ)`, nested calls use `(child, θ)`
+end)
+```
 
-The generated type is named `ConstructorOf{Name}`. For `Gauss`, the macro creates
-`ConstructorOfGauss` and a method equivalent to
-`build_model(c::ConstructorOfGauss, pars)`.
+The generated type is `ConstructorOf{Name}` (here `ConstructorOfGauss`). For `field::P`, structs store **`description_of_field`**; numeric values are injected before the RHS of the arrow via `BuildConstructors.value(...; pars = binder)`. For typed or parametric slots, bindings are **`field = c.field`**.
 
-Field declarations have three forms, and the distinction is important:
+Field forms:
 
 | Form | Meaning |
 | --- | --- |
-| `field::P` | A parameter descriptor field, available in the body as the resolved value `field`. |
-| `field::SomeType` | A constant field; in the body use bare `field` (bound from the constructor instance). |
-| `field` | A parametric field (nested constructors, etc.); in the body use bare `field`. |
+| `field::P` | Parameter descriptor → resolved numeric `field` inside the RHS. |
+| `field::SomeType` | Constant slot → bare `field` from the constructor instance. |
+| `field` | Parametric slot (nested constructors, etc.) → bare `field`. |
 
-For `field::P`, the generated struct field is named `description_of_field`.
-This keeps the constructor honest: it stores the parameter description, not the
-current numeric value. During `build_model`, the macro inserts:
+Scaled wrapper:
 
 ```julia
-field = BuildConstructors.value(c.description_of_field; pars)
-```
-
-For `field::SomeType` and plain `field`, the macro binds `field = c.field` before the body.
-Every name in the field list is therefore available as a local variable alongside `pars`.
-
-For example:
-
-```julia
-@with_parameters(Scaled; child, scale::P, begin
+@with_parameters(Scaled; child, scale::P, pars -> begin
     child_model = build_model(child, pars)
     x -> scale * child_model(x)
 end)
 ```
 
-Here `child` can be another constructor, a callable, or any user object. `scale`
-is a parameter descriptor, so the generated constructor is called as:
-
 ```julia
 c = ConstructorOfScaled(child_constructor, Running("scale"))
 ```
 
-The generated field order is stable: plain parametric fields first, parameter
-descriptor fields second, and typed constant fields last. That means a mixed
-declaration such as:
+Field reordering in generated constructors (stable): plain parametric fields first, then `::P` descriptors, then typed constants. Mixed declaration:
 
 ```julia
-@with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, begin
+@with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, pars -> begin
     truncated(build_model(model, pars), support[1] + μ, support[2] + μ)
 end)
 ```
 
-is constructed as:
-
 ```julia
 ConstructorOfWindowed(model, μ_descriptor, support)
 ```
+
+Bare `begin ... end` without `pars ->` is **not** accepted; always write **one unary lambda** last.
 
 Use the macro when that generated shape is clear and useful. Write the constructor
 and `build_model` by hand when you need a custom field order, extra validation,

@@ -6,7 +6,7 @@
     model_b,
     support::Tuple{Float64,Float64},
     grid_size::Int,
-    begin
+    pars -> begin
         p = build_model(model_p, pars)
         r = build_model(model_r, pars)
         b = build_model(model_b, pars)

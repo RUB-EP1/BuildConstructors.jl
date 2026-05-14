@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Breaking
+
+- `@with_parameters`: the model body **must** be a unary lambda (`pars -> expr` or `pars -> begin ... end`). A bare trailing `begin ... end` is rejected (error suggests `pars -> begin ... end`). Binder names other than `pars` remain allowed; `binder::Type` and tuple destructuring remain rejected. Docs, README, extension primitives, and examples are updated.
+
 ## 0.5.0
 
 ### Changed

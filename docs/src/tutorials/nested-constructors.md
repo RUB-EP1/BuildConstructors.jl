@@ -13,17 +13,19 @@ only describes how to assemble it.
 using BuildConstructors
 using Distributions
 
-@with_parameters(Gauss; μ::P, σ::P, begin
+@with_parameters(Gauss; μ::P, σ::P, pars -> begin
     Normal(μ, σ)
 end)
 
-@with_parameters(Mixture; left, right, f_left::P, begin
+@with_parameters(Mixture; left, right, f_left::P, pars -> begin
     MixtureModel(
         [build_model(left, pars), build_model(right, pars)],
         [f_left, 1 - f_left],
     )
 end)
 ```
+
+The last argument must be a unary lambda; `pars ->` binds the argument passed through to nested `build_model` calls (`θ ->` instead of `pars ->` works the same).
 
 The plain fields `left` and `right` are child constructors. The `f_left::P` field
 is a parameter descriptor, so its resolved value is available as `f_left` inside

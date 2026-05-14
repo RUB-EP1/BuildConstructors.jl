@@ -6,8 +6,8 @@ the vector passed through the Minuit callback. When the starting point is a
 `ComponentArray`, Minuit2 can infer those axes and call the objective with named
 parameters.
 
-The setup is the same as for `Optim.jl`: collect constructor metadata into
-`ComponentArray`s and write the objective in terms of named parameters.
+The mixture setup matches the [Nested Constructors](@ref)
+tutorial (`pars -> begin ... end` syntax).
 
 ```julia
 using BuildConstructors
@@ -16,11 +16,11 @@ using Distributions
 using Minuit2
 using Random
 
-@with_parameters(Gauss; μ::P, σ::P, begin
+@with_parameters(Gauss; μ::P, σ::P, pars -> begin
     Normal(μ, σ)
 end)
 
-@with_parameters(Mixture; left, right, f_left::P, begin
+@with_parameters(Mixture; left, right, f_left::P, pars -> begin
     MixtureModel(
         [build_model(left, pars), build_model(right, pars)],
         [f_left, 1 - f_left],

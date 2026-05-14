@@ -13,7 +13,7 @@ include("physics_access.jl")
     μ::P,
     σ::P,
     support::Tuple{Float64,Float64},
-    begin
+    pars -> begin
         truncated(Normal(μ, σ), support[1], support[2])
     end
 )
@@ -50,7 +50,7 @@ end
     Pol1Macro;
     c1C::P,
     support::Tuple{Float64,Float64},
-    begin
+    pars -> begin
         Chebyshev([1, c1C], support[1], support[2])
     end
 )
@@ -67,7 +67,7 @@ cp1_manual = ConstructorOfPol1(Running("c1C"), (1.1, 2.5))
 end
 
 # Test Case 3: Complex parameter names (no support field needed)
-@with_parameters(TestModelMacro; γre::P, γim::P, begin
+@with_parameters(TestModelMacro; γre::P, γim::P, pars -> begin
     # Simple test - just return a number for now
     γre + γim
 end)
@@ -89,7 +89,7 @@ end
     support::Tuple{Float64,Float64},
     threshold::Float64,
     n_bins::Int,
-    begin
+    pars -> begin
         # Use multiple constant fields
         if μ > threshold
             truncated(Normal(μ, σ), support[1], support[2])
@@ -112,13 +112,18 @@ cm = ConstructorOfComplexModel(Fixed(0.0), Fixed(0.1), (-0.5, 0.5), 0.0, 10)
 end
 
 # Test Case 5: Parametric fields (fields without type annotations)
-@with_parameters(ScaleMacro; D, scale::P, begin
+@with_parameters(ScaleMacro; D, scale::P, pars -> begin
     build_model(D, pars) * scale
 end)
 
 # Bare `D` works when `D` is a typed constant slot (`field::SomeType`).
-@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, begin
+@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, pars -> begin
     build_model(D, pars) * scale
+end)
+
+# Explicit `θ ->`: same semantics as ScaleMacro (`build_model` second argument renamed).
+@with_parameters(LambdaRenamed; D, scale::P, p -> begin
+    build_model(D, p) * scale
 end)
 
 @testset "Macro with parametric fields" begin
@@ -135,6 +140,22 @@ end)
     @test pdf(model, 0.0) > 0
 end
 
+@testset "@with_parameters lambda body" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    cl = ConstructorOfLambdaRenamed(inner, Fixed(2.0))
+    model = build_model(cl, NamedTuple())
+    @test model isa Distribution
+    @test pdf(model, 0.0) > 0
+    @test_throws ErrorException macroexpand(
+        @__MODULE__,
+        :(@with_parameters(JunkIgnored; μ::P, θ::NamedTuple -> begin μ end)),
+    )
+    @test_throws ErrorException macroexpand(
+        @__MODULE__,
+        :(@with_parameters(JunkLegacy; μ::P, begin μ end)),
+    )
+end
+
 @testset "Macro constant slot: bare field name" begin
     inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
     # Argument order: descriptor fields, then constant fields.
@@ -145,7 +166,7 @@ end
 end
 
 # Regression: no static check on `build_model(m, pars)` — `m` is a loop variable, not a field.
-@with_parameters(BatchMacro; models, begin
+@with_parameters(BatchMacro; models, pars -> begin
     [build_model(m, pars) for m in models]
 end)
 
@@ -156,6 +177,21 @@ end)
     @test built isa Vector
     @test length(built) == 2
     @test built[1] isa Distribution
+end
+
+# PR-review-style example: constant field typed as `Vector`, comprehension binds `m` locally.
+@with_parameters(Sum; models::Vector, pars -> begin
+    [build_model(m, pars) for m in models]
+end)
+
+@testset "build_model in comprehension with models::Vector slot" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    cs = ConstructorOfSum([inner, inner])
+    built = build_model(cs, NamedTuple())
+    @test built isa Vector
+    @test length(built) == 2
+    @test built[1] isa Distribution
+    @test pdf(built[1], 0.0) ≈ pdf(built[2], 0.0)
 end
 
 println("All macro tests passed!")

@@ -5,7 +5,8 @@ optimizers that expect array-like inputs. The objective can receive a
 `ComponentArray`, access parameters by name, and still satisfy `Optim.jl` because
 `ComponentArray` behaves like a vector.
 
-This tutorial fits the nested mixture constructor from the previous tutorial.
+This tutorial uses the nested mixture constructor from the [Nested Constructors](@ref)
+tutorial (same `@with_parameters` lambda-body pattern).
 
 ```julia
 using BuildConstructors
@@ -14,11 +15,11 @@ using Distributions
 using Optim
 using Random
 
-@with_parameters(Gauss; μ::P, σ::P, begin
+@with_parameters(Gauss; μ::P, σ::P, pars -> begin
     Normal(μ, σ)
 end)
 
-@with_parameters(Mixture; left, right, f_left::P, begin
+@with_parameters(Mixture; left, right, f_left::P, pars -> begin
     MixtureModel(
         [build_model(left, pars), build_model(right, pars)],
         [f_left, 1 - f_left],

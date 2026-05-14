@@ -15,7 +15,7 @@ uncertainties, and fixed/free state.
 using BuildConstructors
 using Distributions
 
-@with_parameters(Gauss; μ::P, σ::P, begin
+@with_parameters(Gauss; μ::P, σ::P, pars -> begin
     Normal(μ, σ)
 end)
 
@@ -29,6 +29,10 @@ model = build_model(constructor, start)
 ```
 
 The constructor carries the metadata. The built object is just a `Normal`.
+
+The last comma-separated clause in the `@with_parameters` call must be a unary lambda,
+usually **`pars -> begin ... end`**. Rename the binder (`θ`, `p`, ...) if you prefer;
+never annotate it (`θ::NamedTuple`). See README: **Less Boilerplate With `@with_parameters`**.
 
 ## Optional physics constructors
 
