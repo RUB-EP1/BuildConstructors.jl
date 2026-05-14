@@ -158,4 +158,18 @@ end)
     @test built[1] isa Distribution
 end
 
+# Regression: constant slot named `c` declared before descriptors must not shadow the
+# generated constructor reference when extracting `::P` fields (binding order follows
+# the macro header).
+@with_parameters(FieldNamedCSlotConstFirst; c::Float64, λ::P, begin
+    c + λ
+end)
+
+@testset "constant slot named c before descriptors" begin
+    # Constructor order is descriptors first (`λ`), then typed constants (`c`), regardless of
+    # declaration order in the macro header (see package docs).
+    ct = ConstructorOfFieldNamedCSlotConstFirst(Fixed(10.0), 2.0)
+    @test build_model(ct, NamedTuple()) == 12.0
+end
+
 println("All macro tests passed!")

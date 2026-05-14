@@ -154,7 +154,7 @@ function generate_struct_definition(
 end
 
 # Multiple dispatch: Extract parameter value for DescriptorField (`::P`)
-function extract_parameter!(param_extractions, field::DescriptorField, value_ref)
+function extract_parameter!(param_extractions, field::DescriptorField, value_ref, c_inst)
     field_name = Symbol("description_of_", field.name)
     push!(
         param_extractions.args,
@@ -165,21 +165,24 @@ function extract_parameter!(param_extractions, field::DescriptorField, value_ref
                 :call,
                 value_ref,
                 Expr(:parameters, :pars),
-                Expr(:., :c, QuoteNode(field_name)),
+                Expr(:., c_inst, QuoteNode(field_name)),
             ),
         ),
     )
     return nothing
 end
 
-extract_parameter!(::Any, ::ParametricField, ::Any) = nothing
-extract_parameter!(::Any, ::ConstantField, ::Any) = nothing
+extract_parameter!(::Any, ::ParametricField, ::Any, ::Any) = nothing
+extract_parameter!(::Any, ::ConstantField, ::Any, ::Any) = nothing
 
-function add_slot_bindings!(bindings_block, field::Union{ParametricField, ConstantField})
-    push!(bindings_block.args, Expr(:(=), field.name, Expr(:., :c, QuoteNode(field.name))))
+function add_slot_bindings!(bindings_block, field::Union{ParametricField, ConstantField}, c_inst)
+    push!(
+        bindings_block.args,
+        Expr(:(=), field.name, Expr(:., c_inst, QuoteNode(field.name))),
+    )
     return nothing
 end
-add_slot_bindings!(::Any, ::DescriptorField) = nothing
+add_slot_bindings!(::Any, ::DescriptorField, ::Any) = nothing
 
 # Multiple dispatch: Count fields by type
 count_descriptor_fields(fields) = count(f -> f isa DescriptorField, fields)
@@ -188,12 +191,15 @@ count_parametric_fields(fields) = count(f -> f isa ParametricField, fields)
 # Helper: Generate build_model function
 function generate_build_model_function(constructor_name, ordered_fields, body)
     value_ref = Expr(:., :BuildConstructors, QuoteNode(:value))
+    # Gensym the constructor formal so slot bindings named `c` cannot shadow accesses
+    # to the instance (bindings run in declaration order).
+    c_inst = gensym(:c)
 
-    # Descriptor locals: param = value(c.description_of_{param}; pars)
+    # Descriptor locals: param = value(<ctor>.description_of_{param}; pars)
     build_model_body = Expr(:block)
     for field in ordered_fields
-        add_slot_bindings!(build_model_body, field)
-        extract_parameter!(build_model_body, field, value_ref)
+        add_slot_bindings!(build_model_body, field, c_inst)
+        extract_parameter!(build_model_body, field, value_ref, c_inst)
     end
 
     # User body
@@ -207,7 +213,7 @@ function generate_build_model_function(constructor_name, ordered_fields, body)
     build_model_ref = Expr(:., :BuildConstructors, QuoteNode(:build_model))
     return Expr(
         :function,
-        Expr(:call, build_model_ref, Expr(:(::), :c, constructor_name), :pars),
+        Expr(:call, build_model_ref, Expr(:(::), c_inst, constructor_name), :pars),
         build_model_body,
     )
 end
@@ -312,10 +318,11 @@ constructors predictable even when fields are declared in a mixed order.
 
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
-constant fields are read from `c`.
+constant slots are copied from fields of the constructor instance.
 
 The name `pars` does not appear in the field list; it is fixed by the macro as the
-second argument of the generated `build_model(c, pars)`. That value is whatever the
+second argument of the generated `build_model` method (after the constructor
+argument). That value is whatever the
 caller supplied as the second argument when building this constructor (the same role
 as `pars` throughout `build_model` in this package). When you call `build_model` on a
 nested constructor inside `body`, pass that object through as the second argument —
