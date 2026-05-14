@@ -14,4 +14,4 @@ All notable changes to this project are documented in this file.
 ### Breaking
 
 - Deserialization no longer parses arbitrary Julia expressions from serialized `"type"` strings (previously `eval(Meta.parse(...))`). Only registered type names and simple identifiers resolvable in the extension module (if loaded), `BuildConstructors`, or `Base` are accepted. Parametric forms such as `Fixed{Float64}` in JSON are **not** supported unless you register an explicit name with `register!`. This closes a code-injection risk when loading untrusted JSON.
-- `@with_parameters`: do not use `_.field` in the body; use bare names that match the field list. Calls of the form `build_model(sym, pars)` must use a declared field name as `sym` when `sym` is a plain symbol (macro expansion checks this).
+- `@with_parameters`: do not use `_.field` in the body; use bare names that match the field list for constructor fields. Other `build_model` call patterns follow normal Julia scoping (undeclared names surface as runtime `UndefVarError` where appropriate).

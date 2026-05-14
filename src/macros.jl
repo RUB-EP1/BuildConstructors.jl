@@ -60,33 +60,6 @@ function parse_field(expr)
     end
 end
 
-# `build_model(child, pars)` must use a declared field name as `child` when it is a plain symbol.
-function validate_build_model_nested_refs(expr, declared_fields::Set{Symbol})
-    function walk(e)
-        if e isa Expr
-            if e.head === :call &&
-               length(e.args) == 3 &&
-               e.args[1] === :build_model &&
-               e.args[3] === :pars
-                nest = e.args[2]
-                if nest isa Symbol && !(nest in declared_fields)
-                    error(
-                        "@with_parameters: `build_model($(nest), pars)` uses `$(nest)`, which is not declared in the field list. " *
-                        "Declare it as $(nest), $(nest)::P, or $(nest)::Type.",
-                    )
-                end
-            end
-            for arg in e.args
-                walk(arg)
-            end
-        elseif e isa QuoteNode && e.value isa Expr
-            walk(e.value)
-        end
-    end
-    walk(expr)
-    return nothing
-end
-
 # Helper: Generate type parameters for struct
 # Returns (param_type_params, parametric_type_params) where:
 # - param_type_params: type parameters for AbstractParameter fields (T1, T2, ...)
@@ -339,7 +312,8 @@ constructors predictable even when fields are declared in a mixed order.
 
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
-constant fields are read from `c`. Only those names appear as locals together with `pars`.
+constant fields are read from `c`. Those names appear as locals together with `pars`
+and with any other bindings normal Julia rules allow (e.g. loop variables).
 
 # Examples
 ```julia
@@ -357,9 +331,6 @@ macro with_parameters(model_name_expr, params_expr...)
     # Parse arguments sequentially: model name, fields, and body
     model_name, ordered_fields, body =
         parse_macro_arguments(model_name_expr, params_expr...)
-
-    declared_fields = Set(f.name for f in ordered_fields)
-    validate_build_model_nested_refs(body, declared_fields)
 
     n_descriptor = count_descriptor_fields(ordered_fields)
     n_parametric = count_parametric_fields(ordered_fields)

@@ -144,30 +144,18 @@ end
     @test pdf(model, 0.0) > 0
 end
 
-# Test Case 6: Validation tests - should fail
-@testset "Macro validation errors" begin
-    # Helper to test that a macro call throws an error
-    function test_macro_error(expr, expected_msg)
-        err = try
-            eval(expr)
-            return nothing
-        catch e
-            @assert e isa LoadError && e.error isa ErrorException
-            return e.error
-        end
-        return err
-    end
+# Regression: no static check on `build_model(m, pars)` — `m` is a loop variable, not a field.
+@with_parameters(BatchMacro; models, begin
+    [build_model(m, pars) for m in models]
+end)
 
-    # Test: build_model(D, pars) with undeclared D should fail at macro expansion
-    err2 = test_macro_error(
-        :(@with_parameters(ScaleMacro3; scale::P, begin
-            build_model(D, pars) * scale
-        end)),
-        "not declared",
-    )
-    @test err2 !== nothing
-    @test err2 isa ErrorException
-    @test occursin("not declared", string(err2)) || occursin("Declare", string(err2))
+@testset "build_model in comprehension uses non-field locals" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    cs = ConstructorOfBatchMacro((inner, inner))
+    built = build_model(cs, NamedTuple())
+    @test built isa Vector
+    @test length(built) == 2
+    @test built[1] isa Distribution
 end
 
 println("All macro tests passed!")
