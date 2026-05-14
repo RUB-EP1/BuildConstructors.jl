@@ -5,7 +5,7 @@
     Γ::P,
     support::Tuple{Float64,Float64},
     begin
-        NumericallyIntegrable(e->1/abs2(m^2-e^2 - 1im*m*Γ), _.support)
+        NumericallyIntegrable(e->1/abs2(m^2-e^2 - 1im*m*Γ), support)
     end
 )
 
@@ -18,7 +18,7 @@
         μ = 0.9666176144464419 # reduced mass of D0 and D*0 in GeV/c^2
         k1(E::Complex) = 1im * sqrt(-2μ * (E * 1e-3))
         k1(E::Real) = k1(E + 1e-7im)
-        NumericallyIntegrable(e->1/abs2(-γre-1im*γim-1im*k1(e)), _.support)
+        NumericallyIntegrable(e->1/abs2(-γre-1im*γim-1im*k1(e)), support)
     end
 )
 
@@ -32,7 +32,7 @@
     σ::P,
     support::Tuple{Float64,Float64},
     begin
-        truncated(Normal(μ, σ), _.support[1], _.support[2])
+        truncated(Normal(μ, σ), support[1], support[2])
     end
 )
 
@@ -53,10 +53,10 @@
         σ1_MeV, σ2_MeV = (σ1, σ2) .* 1e3
         α = c0 * (c1 * σ1)^c2 / (1 + (c1 * σ1)^c2)
         d1 = CrystalBall(0.0, σ1_MeV, α, n)
-        td1 = truncated(d1, _.support[1], _.support[2])
+        td1 = truncated(d1, support[1], support[2])
 
         hyp_sec(x, μ, σ) = 1/(2*σ)*sech(π/2 * (x-μ)/σ)
-        td2 = NumericallyIntegrable(x->hyp_sec(x, 0.0, σ2_MeV), _.support)
+        td2 = NumericallyIntegrable(x->hyp_sec(x, 0.0, σ2_MeV), support)
         # mixture model
         w * MixtureModel([td1, td2], [fr1, 1-fr1])
     end
@@ -72,7 +72,7 @@
     c1C::P,
     support::Tuple{Float64,Float64},
     begin
-        Chebyshev([1, c1C], _.support[1], _.support[2])
+        Chebyshev([1, c1C], support[1], support[2])
     end
 )
 
@@ -84,6 +84,6 @@
     c2C::P,
     support::Tuple{Float64,Float64},
     begin
-        Chebyshev([1, c1C, c2C], _.support[1], _.support[2])
+        Chebyshev([1, c1C, c2C], support[1], support[2])
     end
 )

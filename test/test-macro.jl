@@ -14,7 +14,7 @@ include("physics_access.jl")
     σ::P,
     support::Tuple{Float64,Float64},
     begin
-        truncated(Normal(μ, σ), _.support[1], _.support[2])
+        truncated(Normal(μ, σ), support[1], support[2])
     end
 )
 # Test instantiation - order: parametric fields, parameter fields, constant fields
@@ -51,7 +51,7 @@ end
     c1C::P,
     support::Tuple{Float64,Float64},
     begin
-        Chebyshev([1, c1C], _.support[1], _.support[2])
+        Chebyshev([1, c1C], support[1], support[2])
     end
 )
 
@@ -91,8 +91,8 @@ end
     n_bins::Int,
     begin
         # Use multiple constant fields
-        if μ > _.threshold
-            truncated(Normal(μ, σ), _.support[1], _.support[2])
+        if μ > threshold
+            truncated(Normal(μ, σ), support[1], support[2])
         else
             # Use n_bins for something
             Normal(μ, σ)
@@ -113,7 +113,12 @@ end
 
 # Test Case 5: Parametric fields (fields without type annotations)
 @with_parameters(ScaleMacro; D, scale::P, begin
-    build_model(_.D, pars) * scale
+    build_model(D, pars) * scale
+end)
+
+# Bare `D` works when `D` is a typed constant slot (`field::SomeType`).
+@with_parameters(ScaleMacroConstD; D::BuildConstructors.AbstractConstructor, scale::P, begin
+    build_model(D, pars) * scale
 end)
 
 @testset "Macro with parametric fields" begin
@@ -130,47 +135,41 @@ end)
     @test pdf(model, 0.0) > 0
 end
 
-# Test Case 6: Validation tests - should fail
-@testset "Macro validation errors" begin
-    # Helper to test that a macro call throws an error
-    function test_macro_error(expr, expected_msg)
-        err = try
-            eval(expr)
-            return nothing
-        catch e
-            @assert e isa LoadError && e.error isa ErrorException
-            return e.error
-        end
-        return err
-    end
+@testset "Macro constant slot: bare field name" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    # Argument order: descriptor fields, then constant fields.
+    cs = ConstructorOfScaleMacroConstD(Fixed(2.0), inner)
+    model = build_model(cs, NamedTuple())
+    @test model isa Distribution
+    @test pdf(model, 0.0) > 0
+end
 
-    # Test: Field used directly (not via _.field) should fail
-    err1 = test_macro_error(
-        :(@with_parameters(
-            ScaleMacro2;
-            D::AbstractConstructor,
-            scale::P,
-            begin
-                build_model(D) * scale  # Should use _.D
-            end
-        )),
-        "_.field_name",
-    )
-    @test err1 !== nothing
-    @test err1 isa ErrorException
-    @test occursin("_.field_name", string(err1)) ||
-          occursin("must be accessed", string(err1))
+# Regression: no static check on `build_model(m, pars)` — `m` is a loop variable, not a field.
+@with_parameters(BatchMacro; models, begin
+    [build_model(m, pars) for m in models]
+end)
 
-    # Test: Field used via _.field but not declared should fail
-    err2 = test_macro_error(
-        :(@with_parameters(ScaleMacro3; scale::P, begin
-            build_model(_.D) * scale  # D not declared
-        end)),
-        "not declared",
-    )
-    @test err2 !== nothing
-    @test err2 isa ErrorException
-    @test occursin("not declared", string(err2)) || occursin("Please declare", string(err2))
+@testset "build_model in comprehension uses non-field locals" begin
+    inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
+    cs = ConstructorOfBatchMacro((inner, inner))
+    built = build_model(cs, NamedTuple())
+    @test built isa Vector
+    @test length(built) == 2
+    @test built[1] isa Distribution
+end
+
+# Regression: constant slot named `c` declared before descriptors must not shadow the
+# generated constructor reference when extracting `::P` fields (binding order follows
+# the macro header).
+@with_parameters(FieldNamedCSlotConstFirst; c::Float64, λ::P, begin
+    c + λ
+end)
+
+@testset "constant slot named c before descriptors" begin
+    # Constructor order is descriptors first (`λ`), then typed constants (`c`), regardless of
+    # declaration order in the macro header (see package docs).
+    ct = ConstructorOfFieldNamedCSlotConstFirst(Fixed(10.0), 2.0)
+    @test build_model(ct, NamedTuple()) == 12.0
 end
 
 println("All macro tests passed!")

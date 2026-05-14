@@ -11,17 +11,17 @@ theme(:boxed)
 @with_parameters(Gauss; μ::P, σ::P, begin Normal(μ, σ) end)
 @with_parameters(NormalizeAbs2Abs2; D, support::Tuple{Float64,Float64},
     begin
-        NumericallyIntegrable(e->abs2(build_model(_.D, pars)(e^2)), _.support)
+        NumericallyIntegrable(e->abs2(build_model(D, pars)(e^2)), support)
     end)
 @with_parameters(BW; m::P, Γ::P, begin BreitWigner(m, Γ) end)
-@with_parameters(Cut; cModel, support::Tuple{Float64,Float64}, begin truncated(build_model(_.cModel, pars), _.support[1], _.support[2]) end)
-@with_parameters(S; cModel, scale::P, begin build_model(_.cModel, pars) * scale end)
+@with_parameters(Cut; cModel, support::Tuple{Float64,Float64}, begin truncated(build_model(cModel, pars), support[1], support[2]) end)
+@with_parameters(S; cModel, scale::P, begin build_model(cModel, pars) * scale end)
 @with_parameters(Comb; 
     cModel1,
     cModel2, 
     weight::P,
     begin
-        MixtureModel([build_model(_.cModel1, pars), build_model(_.cModel2, pars)], [weight, 1-weight])
+        MixtureModel([build_model(cModel1, pars), build_model(cModel2, pars)], [weight, 1-weight])
     end
 )
 

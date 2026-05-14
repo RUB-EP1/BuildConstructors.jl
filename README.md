@@ -186,8 +186,8 @@ Field declarations have three forms, and the distinction is important:
 | Form | Meaning |
 | --- | --- |
 | `field::P` | A parameter descriptor field, available in the body as the resolved value `field`. |
-| `field::SomeType` | A constant field, accessed in the body as `_.field`. |
-| `field` | A parametric field, useful for nested constructors, accessed as `_.field`. |
+| `field::SomeType` | A constant field; in the body use bare `field` (bound from the constructor instance). |
+| `field` | A parametric field (nested constructors, etc.); in the body use bare `field`. |
 
 For `field::P`, the generated struct field is named `description_of_field`.
 This keeps the constructor honest: it stores the parameter description, not the
@@ -197,16 +197,19 @@ current numeric value. During `build_model`, the macro inserts:
 field = BuildConstructors.value(c.description_of_field; pars)
 ```
 
-For `field::SomeType` and plain `field`, the value is stored directly in the
-constructor. In the body, those fields must be accessed through `_`, as in
-`_.support` or `_.child`. Direct access is rejected by the macro so that parameter
-values and constructor fields do not get mixed up silently.
+For `field::SomeType` and plain `field`, the macro binds `field = c.field` before the body.
+Every name in the field list is therefore available as a local variable in the body.
+
+The name `pars` is separate from that list: it always refers to the second argument of
+the generated `build_model(c, pars)`, i.e. the caller-supplied parameter bundle. Forward
+it unchanged when composing nested constructors (`build_model(child, pars)`) so inner
+`build_model` methods see the same parameters.
 
 For example:
 
 ```julia
 @with_parameters(Scaled; child, scale::P, begin
-    child_model = build_model(_.child, pars)
+    child_model = build_model(child, pars)
     x -> scale * child_model(x)
 end)
 ```
@@ -224,7 +227,7 @@ declaration such as:
 
 ```julia
 @with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, begin
-    truncated(build_model(_.model, pars), _.support[1] + μ, _.support[2] + μ)
+    truncated(build_model(model, pars), support[1] + μ, support[2] + μ)
 end)
 ```
 
