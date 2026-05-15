@@ -112,6 +112,8 @@ fixed_names(c)
 parameter_uncertainties(c)
 parameter_lower_boundaries(c)
 parameter_upper_boundaries(c)
+running_values(c)
+fixed_values(c)
 
 fix!(c, (:σ,))
 release!(c, (:σ,))

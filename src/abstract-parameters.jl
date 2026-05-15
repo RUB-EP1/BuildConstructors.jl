@@ -235,6 +235,70 @@ parameter_uncertainties(p) = NamedTuple()
 parameter_upper_boundaries(p) = NamedTuple()
 parameter_lower_boundaries(p) = NamedTuple()
 
+"""
+    running_values(constructor)
+
+Get values for the currently running parameters by filtering `parameter_values`
+with `running_names`.
+"""
+running_values(p) = NamedTuple{running_names(p)}(parameter_values(p))
+
+"""
+    running_uncertainties(constructor)
+
+Get uncertainties for the currently running parameters by filtering
+`parameter_uncertainties` with `running_names`.
+"""
+running_uncertainties(p) = NamedTuple{running_names(p)}(parameter_uncertainties(p))
+
+"""
+    running_upper_boundaries(constructor)
+
+Get upper boundaries for the currently running parameters by filtering
+`parameter_upper_boundaries` with `running_names`.
+"""
+running_upper_boundaries(p) = NamedTuple{running_names(p)}(parameter_upper_boundaries(p))
+
+"""
+    running_lower_boundaries(constructor)
+
+Get lower boundaries for the currently running parameters by filtering
+`parameter_lower_boundaries` with `running_names`.
+"""
+running_lower_boundaries(p) = NamedTuple{running_names(p)}(parameter_lower_boundaries(p))
+
+"""
+    fixed_values(constructor)
+
+Get values for the currently fixed named parameters by filtering
+`parameter_values` with `fixed_names`.
+"""
+fixed_values(p) = NamedTuple{fixed_names(p)}(parameter_values(p))
+
+"""
+    fixed_uncertainties(constructor)
+
+Get uncertainties for the currently fixed named parameters by filtering
+`parameter_uncertainties` with `fixed_names`.
+"""
+fixed_uncertainties(p) = NamedTuple{fixed_names(p)}(parameter_uncertainties(p))
+
+"""
+    fixed_upper_boundaries(constructor)
+
+Get upper boundaries for the currently fixed named parameters by filtering
+`parameter_upper_boundaries` with `fixed_names`.
+"""
+fixed_upper_boundaries(p) = NamedTuple{fixed_names(p)}(parameter_upper_boundaries(p))
+
+"""
+    fixed_lower_boundaries(constructor)
+
+Get lower boundaries for the currently fixed named parameters by filtering
+`parameter_lower_boundaries` with `fixed_names`.
+"""
+fixed_lower_boundaries(p) = NamedTuple{fixed_names(p)}(parameter_lower_boundaries(p))
+
 
 """
     fix!(constructor)

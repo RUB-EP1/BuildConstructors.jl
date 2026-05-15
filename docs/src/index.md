@@ -63,6 +63,14 @@ BuildConstructors.parameter_values
 BuildConstructors.parameter_uncertainties
 BuildConstructors.parameter_lower_boundaries
 BuildConstructors.parameter_upper_boundaries
+BuildConstructors.running_values
+BuildConstructors.running_uncertainties
+BuildConstructors.running_lower_boundaries
+BuildConstructors.running_upper_boundaries
+BuildConstructors.fixed_values
+BuildConstructors.fixed_uncertainties
+BuildConstructors.fixed_lower_boundaries
+BuildConstructors.fixed_upper_boundaries
 BuildConstructors.fix!
 BuildConstructors.release!
 BuildConstructors.update!

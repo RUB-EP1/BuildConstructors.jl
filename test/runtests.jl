@@ -13,6 +13,8 @@ end)
     @test BuildConstructors.value(fixed; pars = (x = 3.0,)) == 2.0
     @test BuildConstructors.value(running; pars = (x = 3.0,)) == 3.0
     @test isequal(parameter_values(running), (x = missing,))
+    @test isequal(running_values(running), (x = missing,))
+    @test isequal(fixed_values(running), NamedTuple())
     @test running_names(running) == (:x,)
 
     constructor = ConstructorOfAffineCore(Fixed(2.0), Running("b"))

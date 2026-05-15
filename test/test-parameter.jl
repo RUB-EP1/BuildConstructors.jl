@@ -90,6 +90,23 @@ end
     @test fixed_names(constructor) == (:c1,)
 end
 
+@testset "running and fixed metadata filters" begin
+    release!(constructor)
+    fix!(constructor, (:m, :c1, :fs))
+
+    @test isequal(running_values(constructor), (Γ = 0.2, σ = missing))
+    @test isequal(fixed_values(constructor), (m = 2.0, c1 = 0.3, fs = 0.5))
+
+    @test isequal(running_uncertainties(constructor), (Γ = missing, σ = missing))
+    @test isequal(fixed_uncertainties(constructor), (m = missing, c1 = missing, fs = 0.01))
+
+    @test running_upper_boundaries(constructor) == (Γ = Inf, σ = Inf)
+    @test fixed_upper_boundaries(constructor) == (m = Inf, c1 = Inf, fs = 1.0)
+
+    @test running_lower_boundaries(constructor) == (Γ = -Inf, σ = -Inf)
+    @test fixed_lower_boundaries(constructor) == (m = -Inf, c1 = -Inf, fs = 0.0)
+end
+
 @testset "Release all, and fix all" begin
     release!(constructor)
     @test constructor.model_p.description_of_m.fixed == false

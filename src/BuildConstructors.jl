@@ -15,6 +15,14 @@ export parameter_values
 export parameter_uncertainties
 export parameter_upper_boundaries
 export parameter_lower_boundaries
+export running_values
+export running_uncertainties
+export running_upper_boundaries
+export running_lower_boundaries
+export fixed_values
+export fixed_uncertainties
+export fixed_upper_boundaries
+export fixed_lower_boundaries
 include("abstract-parameters.jl")
 
 export Fixed
