@@ -56,6 +56,22 @@ the value because `Running` stores no default.
 running_values(c::Running) = NamedTuple{(Symbol(c.name),)}((missing,))
 
 """
+    released_values(p::Running)
+
+Return a one-entry `NamedTuple` for the running parameter name. Plain `Running`
+parameters are always released.
+"""
+released_values(c::Running) = running_values(c)
+
+"""
+    fixed_values(p::Running)
+
+Return an empty `NamedTuple` because plain `Running` parameters are always
+released.
+"""
+fixed_values(c::Running) = NamedTuple()
+
+"""
     running_uncertainties(p::Running)
 
 Return `missing` uncertainty metadata for a plain `Running` parameter.
@@ -142,6 +158,20 @@ end
 Return the stored value for this parameter, whether it is currently fixed or free.
 """
 running_values(c::FlexibleParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
+
+"""
+    released_values(p::FlexibleParameter)
+
+Return the stored value only when this parameter is currently free.
+"""
+released_values(c::FlexibleParameter) = c.fixed ? NamedTuple() : running_values(c)
+
+"""
+    fixed_values(p::FlexibleParameter)
+
+Return the stored value only when this parameter is currently fixed.
+"""
+fixed_values(c::FlexibleParameter) = c.fixed ? running_values(c) : NamedTuple()
 
 """
     running_uncertainties(p::FlexibleParameter)
@@ -236,6 +266,20 @@ end
 Return the stored value for this parameter.
 """
 running_values(c::AdvancedParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
+
+"""
+    released_values(p::AdvancedParameter)
+
+Return the stored value only when this parameter is currently free.
+"""
+released_values(c::AdvancedParameter) = c.fixed ? NamedTuple() : running_values(c)
+
+"""
+    fixed_values(p::AdvancedParameter)
+
+Return the stored value only when this parameter is currently fixed.
+"""
+fixed_values(c::AdvancedParameter) = c.fixed ? running_values(c) : NamedTuple()
 
 """
     running_uncertainties(p::AdvancedParameter)

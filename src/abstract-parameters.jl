@@ -6,8 +6,9 @@ Abstract supertype for parameter descriptors.
 A parameter descriptor is metadata about a numeric value, not necessarily the
 numeric value itself. Subtypes should implement `BuildConstructors.value(p; pars)`
 to define how the number is obtained when a constructor is built. They may also
-implement `fix!`, `release!`, `update!`, and the `running_*` collectors when they
-carry fixed/free state, defaults, bounds, or uncertainties.
+implement `fix!`, `release!`, `update!`, `running_*` collectors, and
+`released_values` / `fixed_values` when they carry fixed/free state, defaults, bounds, or
+uncertainties.
 """
 abstract type AbstractParameter end
 
@@ -88,6 +89,56 @@ vals = running_values(constructor)
 running_values(p::AbstractParameter) = NamedTuple()
 
 """
+    released_values(constructor)
+
+Get the stored values of all currently released parameters as a `NamedTuple`.
+
+This is the free-parameter counterpart to `running_values`: fixed `FlexibleParameter`
+and `AdvancedParameter` descriptors are omitted, while plain `Running` parameters
+are always included.
+
+# Arguments
+- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
+
+# Returns
+A `NamedTuple` of released parameter names and their current values. Parameters
+without a stored value return `missing`.
+
+# Examples
+```julia
+fix!(constructor, (:m,))
+vals = released_values(constructor)
+# Returns all running values except m
+```
+"""
+released_values(p::AbstractParameter) = NamedTuple()
+
+"""
+    fixed_values(constructor)
+
+Get the stored values of all currently fixed named parameters as a `NamedTuple`.
+
+This is the fixed-parameter counterpart to `released_values`: fixed
+`FlexibleParameter` and `AdvancedParameter` descriptors are included, while plain
+`Running` parameters are omitted. `Fixed` descriptors are also omitted because
+they do not carry names.
+
+# Arguments
+- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
+
+# Returns
+A `NamedTuple` of fixed parameter names and their current stored values.
+
+# Examples
+```julia
+fix!(constructor, (:m,))
+vals = fixed_values(constructor)
+# Returns (m = 2.0,) when m is a fixed FlexibleParameter or AdvancedParameter
+```
+"""
+fixed_values(p::AbstractParameter) = NamedTuple()
+
+"""
     running_uncertainties(constructor)
 
 Get the uncertainties for all running parameters as a `NamedTuple`.
@@ -159,6 +210,8 @@ fix!(p, par_names) = nothing
 release!(p, par_names) = nothing
 update!(p, pars) = nothing
 running_values(p) = NamedTuple()
+released_values(p) = NamedTuple()
+fixed_values(p) = NamedTuple()
 running_uncertainties(p) = NamedTuple()
 running_upper_boundaries(p) = NamedTuple()
 running_lower_boundaries(p) = NamedTuple()

@@ -9,6 +9,8 @@ export fix!
 export release!
 export update!
 export running_values
+export released_values
+export fixed_values
 export running_uncertainties
 export running_upper_boundaries
 export running_lower_boundaries

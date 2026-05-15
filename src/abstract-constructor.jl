@@ -5,7 +5,7 @@ Abstract supertype for objects that describe how to build another Julia object.
 
 Subtypes usually store parameter descriptors and any non-parameter configuration
 needed by `build_model`. Generic metadata utilities such as `running_values`,
-`fix!`, `release!`, and `update!` recurse through fields of
+`released_values`, `fixed_values`, `fix!`, `release!`, and `update!` recurse through fields of
 `AbstractConstructor`s, so nested constructors compose naturally.
 """
 abstract type AbstractConstructor end
@@ -36,6 +36,8 @@ end
 # collection functionality
 for func in (
     :running_values,
+    :released_values,
+    :fixed_values,
     :running_uncertainties,
     :running_upper_boundaries,
     :running_lower_boundaries,

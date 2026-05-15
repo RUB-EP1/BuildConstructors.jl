@@ -66,6 +66,29 @@ end
     update!(constructor.model_p, (m = 2.0, Γ = 0.2))
 end
 
+@testset "released_values" begin
+    release!(constructor)
+    @test isequal(released_values(Fixed(1.0)), NamedTuple())
+    @test isequal(released_values(Running("x")), (x = missing,))
+    @test isequal(fixed_values(Fixed(1.0)), NamedTuple())
+    @test isequal(fixed_values(Running("x")), NamedTuple())
+    @test isequal(released_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5))
+    @test isequal(fixed_values(constructor), NamedTuple())
+
+    fix!(constructor, (:m, :c1, :fs))
+    @test isequal(running_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5))
+    @test isequal(released_values(constructor), (Γ = 0.2, σ = missing))
+    @test isequal(fixed_values(constructor), (m = 2.0, c1 = 0.3, fs = 0.5))
+    @test isequal(
+        merge(fixed_values(constructor), released_values(constructor)),
+        (m = 2.0, c1 = 0.3, fs = 0.5, Γ = 0.2, σ = missing),
+    )
+
+    release!(constructor, (:m, :fs))
+    @test isequal(released_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, fs = 0.5))
+    @test isequal(fixed_values(constructor), (c1 = 0.3,))
+end
+
 @testset "Release all, and fix all" begin
     release!(constructor)
     @test constructor.model_p.description_of_m.fixed == false
