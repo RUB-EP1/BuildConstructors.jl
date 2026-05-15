@@ -97,7 +97,7 @@ The package includes a few ready-to-use descriptors:
 
 | Descriptor | Use |
 | --- | --- |
-| `Fixed(value)` | A constant value that is not collected as a running parameter. |
+| `Fixed(value)` | A constant value that is not collected as a named parameter. |
 | `Running(name)` | A free parameter read from `pars` by name. |
 | `FlexibleParameter(name, value)` | A parameter with a stored value that can be fixed or released. |
 | `AdvancedParameter(name, value; boundaries, uncertainty)` | A parameter with a stored value, bounds, uncertainty, and fixed/free state. |
@@ -106,6 +106,9 @@ The same generic tools work recursively on constructors and nested constructors:
 
 ```julia
 parameter_values(c)
+parameter_names(c)
+running_names(c)
+fixed_names(c)
 parameter_uncertainties(c)
 parameter_lower_boundaries(c)
 parameter_upper_boundaries(c)

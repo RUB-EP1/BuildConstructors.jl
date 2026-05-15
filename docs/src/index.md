@@ -56,6 +56,9 @@ BuildConstructors.FlexibleParameter
 BuildConstructors.AdvancedParameter
 BuildConstructors.AbstractConstructor
 BuildConstructors.build_model
+BuildConstructors.parameter_names
+BuildConstructors.running_names
+BuildConstructors.fixed_names
 BuildConstructors.parameter_values
 BuildConstructors.parameter_uncertainties
 BuildConstructors.parameter_lower_boundaries

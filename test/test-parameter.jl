@@ -66,28 +66,28 @@ end
     update!(constructor.model_p, (m = 2.0, Γ = 0.2))
 end
 
-@testset "released_values" begin
+@testset "parameter, running, and fixed names" begin
     release!(constructor)
-    @test isequal(released_values(Fixed(1.0)), NamedTuple())
-    @test isequal(released_values(Running("x")), (x = missing,))
-    @test isequal(fixed_values(Fixed(1.0)), NamedTuple())
-    @test isequal(fixed_values(Running("x")), NamedTuple())
-    @test isequal(released_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5))
-    @test isequal(fixed_values(constructor), NamedTuple())
+    @test parameter_names(Fixed(1.0)) == ()
+    @test running_names(Fixed(1.0)) == ()
+    @test fixed_names(Fixed(1.0)) == ()
+    @test parameter_names(Running("x")) == (:x,)
+    @test running_names(Running("x")) == (:x,)
+    @test fixed_names(Running("x")) == ()
+    @test parameter_names(constructor) == (:m, :Γ, :σ, :c1, :fs)
+    @test running_names(constructor) == (:m, :Γ, :σ, :c1, :fs)
+    @test fixed_names(constructor) == ()
 
     fix!(constructor, (:m, :c1, :fs))
     @test isequal(parameter_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5))
-    @test isequal(running_values(constructor), parameter_values(constructor))
-    @test isequal(released_values(constructor), (Γ = 0.2, σ = missing))
-    @test isequal(fixed_values(constructor), (m = 2.0, c1 = 0.3, fs = 0.5))
-    @test isequal(
-        merge(fixed_values(constructor), released_values(constructor)),
-        (m = 2.0, c1 = 0.3, fs = 0.5, Γ = 0.2, σ = missing),
-    )
+    @test running_names(constructor) == (:Γ, :σ)
+    @test fixed_names(constructor) == (:m, :c1, :fs)
+    @test isequal(NamedTuple{running_names(constructor)}(parameter_values(constructor)), (Γ = 0.2, σ = missing))
+    @test isequal(NamedTuple{fixed_names(constructor)}(parameter_values(constructor)), (m = 2.0, c1 = 0.3, fs = 0.5))
 
     release!(constructor, (:m, :fs))
-    @test isequal(released_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, fs = 0.5))
-    @test isequal(fixed_values(constructor), (c1 = 0.3,))
+    @test running_names(constructor) == (:m, :Γ, :σ, :fs)
+    @test fixed_names(constructor) == (:c1,)
 end
 
 @testset "Release all, and fix all" begin
@@ -117,8 +117,7 @@ end
     # Only Running("σ") should contribute
     @test parameter_uncertainties(constructor) ===
           (m = missing, Γ = missing, σ = missing, c1 = missing, fs = 0.01)
-    @test keys(parameter_uncertainties(constructor)) == keys(parameter_values(constructor))
-    @test isequal(running_uncertainties(constructor), parameter_uncertainties(constructor))
+    @test keys(parameter_uncertainties(constructor)) == parameter_names(constructor)
 end
 
 @testset "parameter_upper_boundaries" begin
@@ -148,7 +147,6 @@ end
 
     p_default = AdvancedParameter("advanced", 1.0)
     @test parameter_upper_boundaries(p_default) == (advanced = Inf,)
-    @test isequal(running_upper_boundaries(constructor), parameter_upper_boundaries(constructor))
 end
 
 @testset "parameter_lower_boundaries" begin
@@ -178,5 +176,4 @@ end
 
     p_default = AdvancedParameter("advanced", 1.0)
     @test parameter_lower_boundaries(p_default) == (advanced = -Inf,)
-    @test isequal(running_lower_boundaries(constructor), parameter_lower_boundaries(constructor))
 end

@@ -56,20 +56,26 @@ the value because `Running` stores no default.
 parameter_values(c::Running) = NamedTuple{(Symbol(c.name),)}((missing,))
 
 """
-    released_values(p::Running)
+    parameter_names(p::Running)
 
-Return a one-entry `NamedTuple` for the running parameter name. Plain `Running`
-parameters are always released.
+Return the running parameter name as a one-element tuple of symbols.
 """
-released_values(c::Running) = parameter_values(c)
+parameter_names(c::Running) = (Symbol(c.name),)
 
 """
-    fixed_values(p::Running)
+    running_names(p::Running)
 
-Return an empty `NamedTuple` because plain `Running` parameters are always
-released.
+Return the running parameter name as a one-element tuple of symbols. Plain
+`Running` parameters are always running.
 """
-fixed_values(c::Running) = NamedTuple()
+running_names(c::Running) = parameter_names(c)
+
+"""
+    fixed_names(p::Running)
+
+Return an empty tuple because plain `Running` parameters are always running.
+"""
+fixed_names(c::Running) = ()
 
 """
     parameter_uncertainties(p::Running)
@@ -160,18 +166,25 @@ Return the stored value for this parameter, whether it is currently fixed or fre
 parameter_values(c::FlexibleParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
 
 """
-    released_values(p::FlexibleParameter)
+    parameter_names(p::FlexibleParameter)
 
-Return the stored value only when this parameter is currently free.
+Return this parameter name as a one-element tuple of symbols.
 """
-released_values(c::FlexibleParameter) = c.fixed ? NamedTuple() : parameter_values(c)
+parameter_names(c::FlexibleParameter) = (Symbol(c.name),)
 
 """
-    fixed_values(p::FlexibleParameter)
+    running_names(p::FlexibleParameter)
 
-Return the stored value only when this parameter is currently fixed.
+Return this parameter name only when this parameter is currently free.
 """
-fixed_values(c::FlexibleParameter) = c.fixed ? parameter_values(c) : NamedTuple()
+running_names(c::FlexibleParameter) = c.fixed ? () : parameter_names(c)
+
+"""
+    fixed_names(p::FlexibleParameter)
+
+Return this parameter name only when this parameter is currently fixed.
+"""
+fixed_names(c::FlexibleParameter) = c.fixed ? parameter_names(c) : ()
 
 """
     parameter_uncertainties(p::FlexibleParameter)
@@ -268,18 +281,25 @@ Return the stored value for this parameter.
 parameter_values(c::AdvancedParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
 
 """
-    released_values(p::AdvancedParameter)
+    parameter_names(p::AdvancedParameter)
 
-Return the stored value only when this parameter is currently free.
+Return this parameter name as a one-element tuple of symbols.
 """
-released_values(c::AdvancedParameter) = c.fixed ? NamedTuple() : parameter_values(c)
+parameter_names(c::AdvancedParameter) = (Symbol(c.name),)
 
 """
-    fixed_values(p::AdvancedParameter)
+    running_names(p::AdvancedParameter)
 
-Return the stored value only when this parameter is currently fixed.
+Return this parameter name only when this parameter is currently free.
 """
-fixed_values(c::AdvancedParameter) = c.fixed ? parameter_values(c) : NamedTuple()
+running_names(c::AdvancedParameter) = c.fixed ? () : parameter_names(c)
+
+"""
+    fixed_names(p::AdvancedParameter)
+
+Return this parameter name only when this parameter is currently fixed.
+"""
+fixed_names(c::AdvancedParameter) = c.fixed ? parameter_names(c) : ()
 
 """
     parameter_uncertainties(p::AdvancedParameter)
