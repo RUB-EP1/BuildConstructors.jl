@@ -8,6 +8,7 @@ using OrderedCollections
 export fix!
 export release!
 export update!
+export parameter_metadata
 export parameter_names
 export running_names
 export fixed_names

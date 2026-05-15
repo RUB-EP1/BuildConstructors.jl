@@ -90,6 +90,30 @@ end
     @test fixed_names(constructor) == (:c1,)
 end
 
+@testset "parameter_metadata" begin
+    release!(constructor)
+    metadata = parameter_metadata(constructor)
+
+    @test length(metadata) == 5
+    @test collect(getproperty.(metadata, :name)) == [:m, :Γ, :σ, :c1, :fs]
+    @test collect(getproperty.(metadata, :parameter_type)) == [
+        FlexibleParameter,
+        FlexibleParameter,
+        Running,
+        FlexibleParameter,
+        AdvancedParameter,
+    ]
+    @test parameter_names(metadata) == (:m, :Γ, :σ, :c1, :fs)
+    @test isequal(parameter_values(metadata), parameter_values(constructor))
+
+    fix!(constructor, (:m, :fs))
+    metadata = parameter_metadata(constructor)
+    @test running_names(metadata) == (:Γ, :σ, :c1)
+    @test fixed_names(metadata) == (:m, :fs)
+    @test isequal(running_values(metadata), running_values(constructor))
+    @test isequal(fixed_values(metadata), fixed_values(constructor))
+end
+
 @testset "running and fixed metadata filters" begin
     release!(constructor)
     fix!(constructor, (:m, :c1, :fs))
@@ -105,6 +129,28 @@ end
 
     @test running_lower_boundaries(constructor) == (Γ = -Inf, σ = -Inf)
     @test fixed_lower_boundaries(constructor) == (m = -Inf, c1 = -Inf, fs = 0.0)
+end
+
+@testset "shared parameter names do not break filtered collectors" begin
+    shared = ConstructorOfBW(
+        FlexibleParameter("shared", 2.0),
+        FlexibleParameter("shared", 0.2),
+        (1.0, 2.5),
+    )
+
+    metadata = parameter_metadata(shared)
+    @test length(metadata) == 2
+    @test collect(getproperty.(metadata, :name)) == [:shared, :shared]
+    @test parameter_names(shared) == (:shared,)
+    @test running_names(shared) == (:shared,)
+    @test isequal(parameter_values(shared), (shared = 0.2,))
+    @test isequal(running_values(shared), (shared = 0.2,))
+
+    fix!(shared, (:shared,))
+    @test running_names(shared) == ()
+    @test fixed_names(shared) == (:shared,)
+    @test isequal(running_values(shared), NamedTuple())
+    @test isequal(fixed_values(shared), (shared = 0.2,))
 end
 
 @testset "Release all, and fix all" begin

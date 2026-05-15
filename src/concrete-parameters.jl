@@ -48,6 +48,13 @@ Resolve a running parameter by reading `Symbol(p.name)` from `pars`.
 value(p::Running; pars) = getproperty(pars, Symbol(p.name))
 
 """
+    parameter_metadata(p::Running)
+
+Return metadata for a plain running parameter.
+"""
+parameter_metadata(c::Running) = _parameter_metadata_entry(c; name = c.name, value = missing)
+
+"""
     parameter_values(p::Running)
 
 Return a one-entry `NamedTuple` for the running parameter name, with `missing` as
@@ -157,6 +164,14 @@ function update!(c::FlexibleParameter, pars)
     hasproperty(pars, sym) && (c.value = getproperty(pars, sym))
     return nothing
 end
+
+"""
+    parameter_metadata(p::FlexibleParameter)
+
+Return metadata for a flexible parameter, including its fixed/free state.
+"""
+parameter_metadata(c::FlexibleParameter) =
+    _parameter_metadata_entry(c; name = c.name, value = c.value, fixed = c.fixed)
 
 """
     parameter_values(p::FlexibleParameter)
@@ -272,6 +287,22 @@ function update!(c::AdvancedParameter, pars)
     hasproperty(pars, sym) && (c.value = getproperty(pars, sym))
     return nothing
 end
+
+"""
+    parameter_metadata(p::AdvancedParameter)
+
+Return metadata for an advanced parameter, including bounds, uncertainty, and
+fixed/free state.
+"""
+parameter_metadata(c::AdvancedParameter) = _parameter_metadata_entry(
+    c;
+    name = c.name,
+    value = c.value,
+    uncertainty = c.uncertainty,
+    lower = c.boundaries[1],
+    upper = c.boundaries[2],
+    fixed = c.fixed,
+)
 
 """
     parameter_values(p::AdvancedParameter)

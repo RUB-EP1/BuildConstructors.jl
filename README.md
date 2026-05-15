@@ -105,6 +105,7 @@ The package includes a few ready-to-use descriptors:
 The same generic tools work recursively on constructors and nested constructors:
 
 ```julia
+metadata = parameter_metadata(c)
 parameter_values(c)
 parameter_names(c)
 running_names(c)

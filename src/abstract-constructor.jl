@@ -4,9 +4,10 @@
 Abstract supertype for objects that describe how to build another Julia object.
 
 Subtypes usually store parameter descriptors and any non-parameter configuration
-needed by `build_model`. Generic metadata utilities such as `parameter_values`,
-`parameter_names`, `running_names`, `fixed_names`, `fix!`, `release!`, and `update!` recurse through fields of
-`AbstractConstructor`s, so nested constructors compose naturally.
+needed by `build_model`. Generic metadata utilities such as `parameter_metadata`,
+`parameter_values`, `parameter_names`, `running_names`, `fixed_names`, `fix!`,
+`release!`, and `update!` recurse through fields of `AbstractConstructor`s, so
+nested constructors compose naturally.
 """
 abstract type AbstractConstructor end
 
@@ -34,27 +35,10 @@ for func in (:fix!, :release!, :update!)
 end
 
 # collection functionality
-for func in (
-    :parameter_values,
-    :parameter_uncertainties,
-    :parameter_upper_boundaries,
-    :parameter_lower_boundaries,
-)
-    @eval function $func(c::AbstractConstructor)
-        _list = NamedTuple()
-        for field in fieldnames(typeof(c))
-            _list = merge(_list, $func(getfield(c, field)))
-        end
-        return _list
-    end
-end
-
-for func in (:parameter_names, :running_names, :fixed_names)
-    @eval function $func(c::AbstractConstructor)
-        _list = ()
-        for field in fieldnames(typeof(c))
-            _list = (_list..., $func(getfield(c, field))...)
-        end
-        return _list
-    end
+function parameter_metadata(c::AbstractConstructor)
+    return (
+        Base.Iterators.flatten(
+            parameter_metadata(getfield(c, field)) for field in fieldnames(typeof(c))
+        )...,
+    )
 end
