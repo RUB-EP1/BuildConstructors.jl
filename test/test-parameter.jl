@@ -105,6 +105,7 @@ end
     ]
     @test parameter_names(metadata) == (:m, :Γ, :σ, :c1, :fs)
     @test isequal(parameter_values(metadata), parameter_values(constructor))
+    @test !any(==(Any), fieldtypes(typeof(parameter_values(metadata))))
 
     fix!(constructor, (:m, :fs))
     metadata = parameter_metadata(constructor)
@@ -145,6 +146,7 @@ end
     @test running_names(shared) == (:shared,)
     @test isequal(parameter_values(shared), (shared = 0.2,))
     @test isequal(running_values(shared), (shared = 0.2,))
+    @test fieldtypes(typeof(parameter_values(shared))) == (Float64,)
 
     fix!(shared, (:shared,))
     @test running_names(shared) == ()

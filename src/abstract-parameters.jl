@@ -77,7 +77,7 @@ raw constructor tree; projection helpers deduplicate by name.
 """
 parameter_metadata(p::AbstractParameter) = ()
 
-_parameter_metadata_entry(p; name, value, uncertainty = missing, lower = -Inf, upper = Inf, fixed = false) = (
+_parameter_metadata_entry(parameter; name, value, uncertainty = missing, lower = -Inf, upper = Inf, fixed = false) = (
     (
         name = Symbol(name),
         value = value,
@@ -85,8 +85,8 @@ _parameter_metadata_entry(p; name, value, uncertainty = missing, lower = -Inf, u
         lower = lower,
         upper = upper,
         fixed = fixed,
-        parameter = p,
-        parameter_type = typeof(p),
+        parameter = parameter,
+        parameter_type = typeof(parameter),
     ),
 )
 
@@ -125,24 +125,17 @@ function _metadata_names(metadata, state::Symbol)
 end
 
 function _metadata_namedtuple(metadata, field::Symbol, state::Symbol)
-    names = Symbol[]
-    values = Any[]
-    for entry in _metadata_entries(metadata)
+    entries = _metadata_entries(metadata)
+    return foldl(entries; init = NamedTuple()) do acc, entry
         include_entry =
             state === :all ||
             (state === :running && !entry.fixed) ||
             (state === :fixed && entry.fixed)
-        include_entry || continue
-        value = getproperty(entry, field)
-        idx = findfirst(==(entry.name), names)
-        if idx === nothing
-            push!(names, entry.name)
-            push!(values, value)
-        else
-            values[idx] = value
+        if include_entry
+            return merge(acc, NamedTuple{(entry.name,)}((getproperty(entry, field),)))
         end
+        return acc
     end
-    return NamedTuple{Tuple(names)}(Tuple(values))
 end
 
 """
