@@ -54,58 +54,6 @@ Return metadata for a plain running parameter.
 """
 parameter_metadata(c::Running) = _parameter_metadata_entry(c; name = c.name, value = missing)
 
-"""
-    parameter_values(p::Running)
-
-Return a one-entry `NamedTuple` for the running parameter name, with `missing` as
-the value because `Running` stores no default.
-"""
-parameter_values(c::Running) = NamedTuple{(Symbol(c.name),)}((missing,))
-
-"""
-    parameter_names(p::Running)
-
-Return the running parameter name as a one-element tuple of symbols.
-"""
-parameter_names(c::Running) = (Symbol(c.name),)
-
-"""
-    running_names(p::Running)
-
-Return the running parameter name as a one-element tuple of symbols. Plain
-`Running` parameters are always running.
-"""
-running_names(c::Running) = parameter_names(c)
-
-"""
-    fixed_names(p::Running)
-
-Return an empty tuple because plain `Running` parameters are always running.
-"""
-fixed_names(c::Running) = ()
-
-"""
-    parameter_uncertainties(p::Running)
-
-Return `missing` uncertainty metadata for a plain `Running` parameter.
-"""
-parameter_uncertainties(p::Running) = NamedTuple{(Symbol(p.name),)}((missing,))
-
-"""
-    parameter_upper_boundaries(p::Running)
-
-Return `Inf` as the default upper boundary for a plain `Running` parameter.
-"""
-parameter_upper_boundaries(c::Running) = NamedTuple{(Symbol(c.name),)}((Inf,))
-
-"""
-    parameter_lower_boundaries(p::Running)
-
-Return `-Inf` as the default lower boundary for a plain `Running` parameter.
-"""
-parameter_lower_boundaries(c::Running) = NamedTuple{(Symbol(c.name),)}((-Inf,))
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # mutable parameter, can be fixed and released
 """
@@ -172,57 +120,6 @@ Return metadata for a flexible parameter, including its fixed/free state.
 """
 parameter_metadata(c::FlexibleParameter) =
     _parameter_metadata_entry(c; name = c.name, value = c.value, fixed = c.fixed)
-
-"""
-    parameter_values(p::FlexibleParameter)
-
-Return the stored value for this parameter, whether it is currently fixed or free.
-"""
-parameter_values(c::FlexibleParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
-
-"""
-    parameter_names(p::FlexibleParameter)
-
-Return this parameter name as a one-element tuple of symbols.
-"""
-parameter_names(c::FlexibleParameter) = (Symbol(c.name),)
-
-"""
-    running_names(p::FlexibleParameter)
-
-Return this parameter name only when this parameter is currently free.
-"""
-running_names(c::FlexibleParameter) = c.fixed ? () : parameter_names(c)
-
-"""
-    fixed_names(p::FlexibleParameter)
-
-Return this parameter name only when this parameter is currently fixed.
-"""
-fixed_names(c::FlexibleParameter) = c.fixed ? parameter_names(c) : ()
-
-"""
-    parameter_uncertainties(p::FlexibleParameter)
-
-Return `missing` uncertainty metadata for a flexible parameter.
-"""
-parameter_uncertainties(p::FlexibleParameter) = NamedTuple{(Symbol(p.name),)}((missing,))
-
-"""
-    parameter_upper_boundaries(p::FlexibleParameter)
-
-Return `Inf` as the default upper boundary for a flexible parameter.
-"""
-parameter_upper_boundaries(p::FlexibleParameter) = NamedTuple{(Symbol(p.name),)}((Inf,))
-
-"""
-    parameter_lower_boundaries(p::FlexibleParameter)
-
-Return `-Inf` as the default lower boundary for a flexible parameter.
-"""
-parameter_lower_boundaries(p::FlexibleParameter) = NamedTuple{(Symbol(p.name),)}((-Inf,))
-
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # advanced parameter, can be fixed and released, and has boundaries and uncertainty
@@ -304,54 +201,3 @@ parameter_metadata(c::AdvancedParameter) = _parameter_metadata_entry(
     fixed = c.fixed,
 )
 
-"""
-    parameter_values(p::AdvancedParameter)
-
-Return the stored value for this parameter.
-"""
-parameter_values(c::AdvancedParameter) = NamedTuple{(Symbol(c.name),)}((c.value,))
-
-"""
-    parameter_names(p::AdvancedParameter)
-
-Return this parameter name as a one-element tuple of symbols.
-"""
-parameter_names(c::AdvancedParameter) = (Symbol(c.name),)
-
-"""
-    running_names(p::AdvancedParameter)
-
-Return this parameter name only when this parameter is currently free.
-"""
-running_names(c::AdvancedParameter) = c.fixed ? () : parameter_names(c)
-
-"""
-    fixed_names(p::AdvancedParameter)
-
-Return this parameter name only when this parameter is currently fixed.
-"""
-fixed_names(c::AdvancedParameter) = c.fixed ? parameter_names(c) : ()
-
-"""
-    parameter_uncertainties(p::AdvancedParameter)
-
-Return the stored uncertainty for this parameter.
-"""
-parameter_uncertainties(p::AdvancedParameter) =
-    NamedTuple{(Symbol(p.name),)}((p.uncertainty,))
-
-"""
-    parameter_upper_boundaries(p::AdvancedParameter)
-
-Return the upper boundary stored in `p.boundaries[2]`.
-"""
-parameter_upper_boundaries(p::AdvancedParameter) =
-    NamedTuple{(Symbol(p.name),)}((p.boundaries[2],))
-
-"""
-    parameter_lower_boundaries(p::AdvancedParameter)
-
-Return the lower boundary stored in `p.boundaries[1]`.
-"""
-parameter_lower_boundaries(p::AdvancedParameter) =
-    NamedTuple{(Symbol(p.name),)}((p.boundaries[1],))
