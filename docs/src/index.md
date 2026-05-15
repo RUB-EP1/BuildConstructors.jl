@@ -24,7 +24,7 @@ constructor = ConstructorOfGauss(
     AdvancedParameter("σ", 1.0; boundaries = (0.05, 5.0), uncertainty = 0.1),
 )
 
-start = running_values(constructor)
+start = parameter_values(constructor)
 model = build_model(constructor, start)
 ```
 
@@ -56,10 +56,22 @@ BuildConstructors.FlexibleParameter
 BuildConstructors.AdvancedParameter
 BuildConstructors.AbstractConstructor
 BuildConstructors.build_model
+BuildConstructors.parameter_metadata
+BuildConstructors.parameter_names
+BuildConstructors.running_names
+BuildConstructors.fixed_names
+BuildConstructors.parameter_values
+BuildConstructors.parameter_uncertainties
+BuildConstructors.parameter_lower_boundaries
+BuildConstructors.parameter_upper_boundaries
 BuildConstructors.running_values
 BuildConstructors.running_uncertainties
 BuildConstructors.running_lower_boundaries
 BuildConstructors.running_upper_boundaries
+BuildConstructors.fixed_values
+BuildConstructors.fixed_uncertainties
+BuildConstructors.fixed_lower_boundaries
+BuildConstructors.fixed_upper_boundaries
 BuildConstructors.fix!
 BuildConstructors.release!
 BuildConstructors.update!

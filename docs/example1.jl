@@ -43,7 +43,7 @@ c = ConstructorOfComb(
 )
 
 # let's see what parameters are running, if there are good default values
-running_values(c)
+parameter_values(c)
 
 # build a model and plot it
 m = build_model(c, (μ = 1.2, scale = 0.7, m = 1.8718, weight = 0.5))

@@ -12,12 +12,16 @@ end)
     running = Running("x")
     @test BuildConstructors.value(fixed; pars = (x = 3.0,)) == 2.0
     @test BuildConstructors.value(running; pars = (x = 3.0,)) == 3.0
+    @test isequal(parameter_values(running), (x = missing,))
     @test isequal(running_values(running), (x = missing,))
+    @test isequal(fixed_values(running), NamedTuple())
+    @test running_names(running) == (:x,)
 
     constructor = ConstructorOfAffineCore(Fixed(2.0), Running("b"))
     model = build_model(constructor, (b = 1.5,))
     @test model(3.0) == 7.5
-    @test isequal(running_values(constructor), (b = missing,))
+    @test isequal(parameter_values(constructor), (b = missing,))
+    @test parameter_names(constructor) == (:b,)
 
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int

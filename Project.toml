@@ -1,7 +1,7 @@
 name = "BuildConstructors"
 uuid = "63b9b590-f22f-4e79-810f-ea9ba6849c26"
 authors = ["Robert Hentges <robert.hentges@cern.ch>"]
-version = "0.5.0"
+version = "0.6.0"
 
 [deps]
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"

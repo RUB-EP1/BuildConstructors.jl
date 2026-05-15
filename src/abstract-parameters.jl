@@ -6,8 +6,8 @@ Abstract supertype for parameter descriptors.
 A parameter descriptor is metadata about a numeric value, not necessarily the
 numeric value itself. Subtypes should implement `BuildConstructors.value(p; pars)`
 to define how the number is obtained when a constructor is built. They may also
-implement `fix!`, `release!`, `update!`, and the `running_*` collectors when they
-carry fixed/free state, defaults, bounds, or uncertainties.
+implement `fix!`, `release!`, `update!`, `parameter_*` collectors, and name
+collectors when they carry fixed/free state, defaults, bounds, or uncertainties.
 """
 abstract type AbstractParameter end
 
@@ -66,102 +66,188 @@ update!(constructor.model_p, ComponentArray(m = 1.9, Γ = 0.1))
 update!(p::AbstractParameter, pars) = nothing
 
 """
-    running_values(constructor)
+    parameter_metadata(constructor)
 
-Get the stored values of all running parameters as a `NamedTuple`. The method is used to collect the starting values.
+Collect all named parameter descriptors as metadata entries.
 
-Returns a `NamedTuple` where each key is a parameter name.
-
-# Arguments
-- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
-
-# Returns
-A `NamedTuple` of parameter names and their current values.
-Parameter without a stored value return `missing`.
-
-# Examples
-```julia
-vals = running_values(constructor)
-# Returns: (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5)
-```
+Each entry is a `NamedTuple` with fields:
+`name`, `value`, `uncertainty`, `lower`, `upper`, `fixed`, `parameter`, and
+`parameter_type`. Duplicate names are preserved here so callers can inspect the
+raw constructor tree; projection helpers deduplicate by name.
 """
-running_values(p::AbstractParameter) = NamedTuple()
+parameter_metadata(p::AbstractParameter) = ()
+
+_parameter_metadata_entry(parameter; name, value, uncertainty = missing, lower = -Inf, upper = Inf, fixed = false) = (
+    (
+        name = Symbol(name),
+        value = value,
+        uncertainty = uncertainty,
+        lower = lower,
+        upper = upper,
+        fixed = fixed,
+        parameter = parameter,
+        parameter_type = typeof(parameter),
+    ),
+)
+
+const _PARAMETER_METADATA_KEYS = (
+    :name,
+    :value,
+    :uncertainty,
+    :lower,
+    :upper,
+    :fixed,
+    :parameter,
+    :parameter_type,
+)
+
+_is_parameter_metadata_entry(entry) =
+    entry isa NamedTuple && all(key -> key in keys(entry), _PARAMETER_METADATA_KEYS)
+
+_is_parameter_metadata(metadata::Tuple) = all(_is_parameter_metadata_entry, metadata)
+
+function _metadata_entries(p)
+    metadata = p isa Tuple && _is_parameter_metadata(p) ? p : parameter_metadata(p)
+    return _is_parameter_metadata(metadata) ? metadata : ()
+end
+
+function _metadata_names(metadata, state::Symbol)
+    names = Symbol[]
+    for entry in _metadata_entries(metadata)
+        include_entry =
+            state === :all ||
+            (state === :running && !entry.fixed) ||
+            (state === :fixed && entry.fixed)
+        include_entry || continue
+        entry.name in names || push!(names, entry.name)
+    end
+    return Tuple(names)
+end
+
+function _metadata_namedtuple(metadata, field::Symbol, state::Symbol)
+    entries = _metadata_entries(metadata)
+    return foldl(entries; init = NamedTuple()) do acc, entry
+        include_entry =
+            state === :all ||
+            (state === :running && !entry.fixed) ||
+            (state === :fixed && entry.fixed)
+        if include_entry
+            return merge(acc, NamedTuple{(entry.name,)}((getproperty(entry, field),)))
+        end
+        return acc
+    end
+end
 
 """
-    running_uncertainties(constructor)
+    parameter_values(constructor)
 
-Get the uncertainties for all running parameters as a `NamedTuple`.
-
-Returns a `NamedTuple` where each key is a parameter name and each value is the parameter's
-uncertainty. Parameters without defined uncertainties return `missing`.
-
-# Arguments
-- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
-
-# Returns
-A `NamedTuple` of parameter names and their uncertainties (or `missing` if not defined).
-
-# Examples
-```julia
-unc = running_uncertainties(constructor)
-# Returns: (m = missing, Γ = missing, σ = missing, c1 = missing, fs = 0.01)
-```
+Get the stored values of all named parameters as a `NamedTuple`.
 """
-running_uncertainties(p::AbstractParameter) = NamedTuple()
+parameter_values(p) = _metadata_namedtuple(p, :value, :all)
 
 """
-    running_upper_boundaries(constructor)
+    parameter_names(constructor)
 
-Get the upper boundaries for all running parameters as a `NamedTuple`.
-
-Returns a `NamedTuple` where each key is a parameter name.
-Parameters without a stored upper boundary return `Inf`.
-
-# Arguments
-- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
-
-# Returns
-A `NamedTuple` of parameter names and their upper boundaries.
-
-# Examples
-```julia
-upper = running_upper_boundaries(constructor)
-# Returns: (m = Inf, Γ = Inf, σ = Inf, c1 = Inf, fs = 1.0)
-```
+Get the names of all named parameters as a tuple of symbols.
 """
-running_upper_boundaries(p::AbstractParameter) = NamedTuple()
+parameter_names(p) = _metadata_names(p, :all)
 
 """
-    running_lower_boundaries(constructor)
+    running_names(constructor)
 
-Get the lower boundaries for all running parameters as a `NamedTuple`.
-
-Returns a `NamedTuple` where each key is a parameter name and each value is the parameter's
-lower boundary. Parameters without explicit boundaries return `-Inf`.
-
-# Arguments
-- `constructor`: A constructor object (e.g., `ConstructorOfPRBModel`) or a parameter object
-
-# Returns
-A `NamedTuple` of parameter names and their lower boundaries.
-
-# Examples
-```julia
-lower = running_lower_boundaries(constructor)
-# Returns: (m = -Inf, Γ = -Inf, σ = -Inf, c1 = -Inf, fs = 0.0)
-```
+Get the names of all currently running parameters as a tuple of symbols.
 """
-running_lower_boundaries(p::AbstractParameter) = NamedTuple()
+running_names(p) = _metadata_names(p, :running)
+
+"""
+    fixed_names(constructor)
+
+Get the names of all currently fixed named parameters as a tuple of symbols.
+"""
+fixed_names(p) = _metadata_names(p, :fixed)
+
+"""
+    parameter_uncertainties(constructor)
+
+Get the uncertainties for all named parameters as a `NamedTuple`.
+"""
+parameter_uncertainties(p) = _metadata_namedtuple(p, :uncertainty, :all)
+
+"""
+    parameter_upper_boundaries(constructor)
+
+Get the upper boundaries for all named parameters as a `NamedTuple`.
+"""
+parameter_upper_boundaries(p) = _metadata_namedtuple(p, :upper, :all)
+
+"""
+    parameter_lower_boundaries(constructor)
+
+Get the lower boundaries for all named parameters as a `NamedTuple`.
+"""
+parameter_lower_boundaries(p) = _metadata_namedtuple(p, :lower, :all)
 
 
 # when applying the methods to any fields it fields, it does nothing 
 fix!(p, par_names) = nothing
 release!(p, par_names) = nothing
 update!(p, pars) = nothing
-running_values(p) = NamedTuple()
-running_uncertainties(p) = NamedTuple()
-running_upper_boundaries(p) = NamedTuple()
-running_lower_boundaries(p) = NamedTuple()
+parameter_metadata(p) = ()
+"""
+    running_values(constructor)
+
+Get values for the currently running parameters.
+"""
+running_values(p) = _metadata_namedtuple(p, :value, :running)
+
+"""
+    running_uncertainties(constructor)
+
+Get uncertainties for the currently running parameters.
+"""
+running_uncertainties(p) = _metadata_namedtuple(p, :uncertainty, :running)
+
+"""
+    running_upper_boundaries(constructor)
+
+Get upper boundaries for the currently running parameters.
+"""
+running_upper_boundaries(p) = _metadata_namedtuple(p, :upper, :running)
+
+"""
+    running_lower_boundaries(constructor)
+
+Get lower boundaries for the currently running parameters.
+"""
+running_lower_boundaries(p) = _metadata_namedtuple(p, :lower, :running)
+
+"""
+    fixed_values(constructor)
+
+Get values for the currently fixed named parameters.
+"""
+fixed_values(p) = _metadata_namedtuple(p, :value, :fixed)
+
+"""
+    fixed_uncertainties(constructor)
+
+Get uncertainties for the currently fixed named parameters.
+"""
+fixed_uncertainties(p) = _metadata_namedtuple(p, :uncertainty, :fixed)
+
+"""
+    fixed_upper_boundaries(constructor)
+
+Get upper boundaries for the currently fixed named parameters.
+"""
+fixed_upper_boundaries(p) = _metadata_namedtuple(p, :upper, :fixed)
+
+"""
+    fixed_lower_boundaries(constructor)
+
+Get lower boundaries for the currently fixed named parameters.
+"""
+fixed_lower_boundaries(p) = _metadata_namedtuple(p, :lower, :fixed)
 
 
 """
@@ -177,7 +263,7 @@ Fix all parameters in the constructor so they remain constant during fitting.
 fix!(constructor)  # Fix all parameters
 ```
 """
-fix!(c) = fix!(c, keys(running_values(c)))
+fix!(c) = fix!(c, keys(parameter_values(c)))
 
 """
     release!(constructor)
@@ -192,4 +278,4 @@ Release all parameters in the constructor so they can vary during fitting.
 release!(constructor)  # Release all parameters
 ```
 """
-release!(c) = release!(c, keys(running_values(c)))
+release!(c) = release!(c, keys(parameter_values(c)))

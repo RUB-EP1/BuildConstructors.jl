@@ -39,7 +39,7 @@ Everything else is convenience:
 | Layer | Essential? | Why it exists |
 | --- | --- | --- |
 | `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Useful defaults | Common descriptor types for fixed/free parameters, defaults, bounds, and uncertainties. |
-| `running_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
+| `parameter_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
 | `@with_parameters` | Convenience | Removes boilerplate when a constructor mostly maps parameter descriptors into a `build_model` body. |
 | `serialize` / `deserialize` / `register!` | Optional | Save and restore constructor descriptions through JSON or database-like workflows. |
 | PRB model constructors and loaders | Optional example | Domain-specific probability-model utilities built with the same general mechanism. |
@@ -82,7 +82,7 @@ end
 
 c = ConstructorOfNormalModel(Fixed(0.0), Running("σ"))
 
-running_values(c)        # (σ = missing,)
+parameter_values(c)      # (σ = missing,)
 model = build_model(c, (σ = 0.2,))
 ```
 
@@ -97,7 +97,7 @@ The package includes a few ready-to-use descriptors:
 
 | Descriptor | Use |
 | --- | --- |
-| `Fixed(value)` | A constant value that is not collected as a running parameter. |
+| `Fixed(value)` | A constant value that is not collected as a named parameter. |
 | `Running(name)` | A free parameter read from `pars` by name. |
 | `FlexibleParameter(name, value)` | A parameter with a stored value that can be fixed or released. |
 | `AdvancedParameter(name, value; boundaries, uncertainty)` | A parameter with a stored value, bounds, uncertainty, and fixed/free state. |
@@ -105,10 +105,16 @@ The package includes a few ready-to-use descriptors:
 The same generic tools work recursively on constructors and nested constructors:
 
 ```julia
+metadata = parameter_metadata(c)
+parameter_values(c)
+parameter_names(c)
+running_names(c)
+fixed_names(c)
+parameter_uncertainties(c)
+parameter_lower_boundaries(c)
+parameter_upper_boundaries(c)
 running_values(c)
-running_uncertainties(c)
-running_lower_boundaries(c)
-running_upper_boundaries(c)
+fixed_values(c)
 
 fix!(c, (:σ,))
 release!(c, (:σ,))
