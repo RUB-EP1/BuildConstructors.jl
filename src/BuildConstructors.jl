@@ -8,11 +8,15 @@ using OrderedCollections
 export fix!
 export release!
 export update!
+export parameter_values
 export running_values
 export released_values
 export fixed_values
+export parameter_uncertainties
 export running_uncertainties
+export parameter_upper_boundaries
 export running_upper_boundaries
+export parameter_lower_boundaries
 export running_lower_boundaries
 include("abstract-parameters.jl")
 

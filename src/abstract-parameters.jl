@@ -6,9 +6,9 @@ Abstract supertype for parameter descriptors.
 A parameter descriptor is metadata about a numeric value, not necessarily the
 numeric value itself. Subtypes should implement `BuildConstructors.value(p; pars)`
 to define how the number is obtained when a constructor is built. They may also
-implement `fix!`, `release!`, `update!`, `running_*` collectors, and
-`released_values` / `fixed_values` when they carry fixed/free state, defaults, bounds, or
-uncertainties.
+implement `fix!`, `release!`, `update!`, `parameter_*` collectors,
+`released_values`, and `fixed_values` when they carry fixed/free state,
+defaults, bounds, or uncertainties.
 """
 abstract type AbstractParameter end
 
@@ -67,9 +67,9 @@ update!(constructor.model_p, ComponentArray(m = 1.9, Γ = 0.1))
 update!(p::AbstractParameter, pars) = nothing
 
 """
-    running_values(constructor)
+    parameter_values(constructor)
 
-Get the stored values of all running parameters as a `NamedTuple`. The method is used to collect the starting values.
+Get the stored values of all named parameters as a `NamedTuple`. The method is used to collect the starting values.
 
 Returns a `NamedTuple` where each key is a parameter name.
 
@@ -82,18 +82,18 @@ Parameter without a stored value return `missing`.
 
 # Examples
 ```julia
-vals = running_values(constructor)
+vals = parameter_values(constructor)
 # Returns: (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5)
 ```
 """
-running_values(p::AbstractParameter) = NamedTuple()
+parameter_values(p::AbstractParameter) = NamedTuple()
 
 """
     released_values(constructor)
 
 Get the stored values of all currently released parameters as a `NamedTuple`.
 
-This is the free-parameter counterpart to `running_values`: fixed `FlexibleParameter`
+This is the free-parameter counterpart to `parameter_values`: fixed `FlexibleParameter`
 and `AdvancedParameter` descriptors are omitted, while plain `Running` parameters
 are always included.
 
@@ -108,7 +108,7 @@ without a stored value return `missing`.
 ```julia
 fix!(constructor, (:m,))
 vals = released_values(constructor)
-# Returns all running values except m
+# Returns all parameter values except m
 ```
 """
 released_values(p::AbstractParameter) = NamedTuple()
@@ -139,9 +139,9 @@ vals = fixed_values(constructor)
 fixed_values(p::AbstractParameter) = NamedTuple()
 
 """
-    running_uncertainties(constructor)
+    parameter_uncertainties(constructor)
 
-Get the uncertainties for all running parameters as a `NamedTuple`.
+Get the uncertainties for all named parameters as a `NamedTuple`.
 
 Returns a `NamedTuple` where each key is a parameter name and each value is the parameter's
 uncertainty. Parameters without defined uncertainties return `missing`.
@@ -154,16 +154,16 @@ A `NamedTuple` of parameter names and their uncertainties (or `missing` if not d
 
 # Examples
 ```julia
-unc = running_uncertainties(constructor)
+unc = parameter_uncertainties(constructor)
 # Returns: (m = missing, Γ = missing, σ = missing, c1 = missing, fs = 0.01)
 ```
 """
-running_uncertainties(p::AbstractParameter) = NamedTuple()
+parameter_uncertainties(p::AbstractParameter) = NamedTuple()
 
 """
-    running_upper_boundaries(constructor)
+    parameter_upper_boundaries(constructor)
 
-Get the upper boundaries for all running parameters as a `NamedTuple`.
+Get the upper boundaries for all named parameters as a `NamedTuple`.
 
 Returns a `NamedTuple` where each key is a parameter name.
 Parameters without a stored upper boundary return `Inf`.
@@ -176,16 +176,16 @@ A `NamedTuple` of parameter names and their upper boundaries.
 
 # Examples
 ```julia
-upper = running_upper_boundaries(constructor)
+upper = parameter_upper_boundaries(constructor)
 # Returns: (m = Inf, Γ = Inf, σ = Inf, c1 = Inf, fs = 1.0)
 ```
 """
-running_upper_boundaries(p::AbstractParameter) = NamedTuple()
+parameter_upper_boundaries(p::AbstractParameter) = NamedTuple()
 
 """
-    running_lower_boundaries(constructor)
+    parameter_lower_boundaries(constructor)
 
-Get the lower boundaries for all running parameters as a `NamedTuple`.
+Get the lower boundaries for all named parameters as a `NamedTuple`.
 
 Returns a `NamedTuple` where each key is a parameter name and each value is the parameter's
 lower boundary. Parameters without explicit boundaries return `-Inf`.
@@ -198,23 +198,29 @@ A `NamedTuple` of parameter names and their lower boundaries.
 
 # Examples
 ```julia
-lower = running_lower_boundaries(constructor)
+lower = parameter_lower_boundaries(constructor)
 # Returns: (m = -Inf, Γ = -Inf, σ = -Inf, c1 = -Inf, fs = 0.0)
 ```
 """
-running_lower_boundaries(p::AbstractParameter) = NamedTuple()
+parameter_lower_boundaries(p::AbstractParameter) = NamedTuple()
 
 
 # when applying the methods to any fields it fields, it does nothing 
 fix!(p, par_names) = nothing
 release!(p, par_names) = nothing
 update!(p, pars) = nothing
-running_values(p) = NamedTuple()
+parameter_values(p) = NamedTuple()
 released_values(p) = NamedTuple()
 fixed_values(p) = NamedTuple()
-running_uncertainties(p) = NamedTuple()
-running_upper_boundaries(p) = NamedTuple()
-running_lower_boundaries(p) = NamedTuple()
+parameter_uncertainties(p) = NamedTuple()
+parameter_upper_boundaries(p) = NamedTuple()
+parameter_lower_boundaries(p) = NamedTuple()
+
+# Backward-compatible aliases for the old "running_*" collector names.
+running_values(p) = parameter_values(p)
+running_uncertainties(p) = parameter_uncertainties(p)
+running_upper_boundaries(p) = parameter_upper_boundaries(p)
+running_lower_boundaries(p) = parameter_lower_boundaries(p)
 
 
 """
@@ -230,7 +236,7 @@ Fix all parameters in the constructor so they remain constant during fitting.
 fix!(constructor)  # Fix all parameters
 ```
 """
-fix!(c) = fix!(c, keys(running_values(c)))
+fix!(c) = fix!(c, keys(parameter_values(c)))
 
 """
     release!(constructor)
@@ -245,4 +251,4 @@ Release all parameters in the constructor so they can vary during fitting.
 release!(constructor)  # Release all parameters
 ```
 """
-release!(c) = release!(c, keys(running_values(c)))
+release!(c) = release!(c, keys(parameter_values(c)))

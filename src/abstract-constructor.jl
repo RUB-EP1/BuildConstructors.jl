@@ -4,7 +4,7 @@
 Abstract supertype for objects that describe how to build another Julia object.
 
 Subtypes usually store parameter descriptors and any non-parameter configuration
-needed by `build_model`. Generic metadata utilities such as `running_values`,
+needed by `build_model`. Generic metadata utilities such as `parameter_values`,
 `released_values`, `fixed_values`, `fix!`, `release!`, and `update!` recurse through fields of
 `AbstractConstructor`s, so nested constructors compose naturally.
 """
@@ -35,12 +35,12 @@ end
 
 # collection functionality
 for func in (
-    :running_values,
+    :parameter_values,
     :released_values,
     :fixed_values,
-    :running_uncertainties,
-    :running_upper_boundaries,
-    :running_lower_boundaries,
+    :parameter_uncertainties,
+    :parameter_upper_boundaries,
+    :parameter_lower_boundaries,
 )
     @eval function $func(c::AbstractConstructor)
         _list = NamedTuple()

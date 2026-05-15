@@ -2,7 +2,7 @@
 
 Nested constructors are the main reason to keep parameter metadata outside the
 model object. A parent constructor can store child constructors, and
-`running_values`, `fix!`, `release!`, `update!`, and `build_model` recurse through
+`parameter_values`, `fix!`, `release!`, `update!`, and `build_model` recurse through
 the full tree.
 
 This example builds a weighted mixture of two normal distributions. The final
@@ -46,17 +46,17 @@ constructor = ConstructorOfMixture(
 The metadata collectors see every parameter in the nested tree:
 
 ```julia
-running_values(constructor)
+parameter_values(constructor)
 # (μ_left = -1.0, σ_left = 0.8, μ_right = 1.2, σ_right = 0.5, f_left = 0.6)
 
-running_lower_boundaries(constructor)
+parameter_lower_boundaries(constructor)
 # (μ_left = -5.0, σ_left = 0.05, μ_right = -5.0, σ_right = 0.05, f_left = 0.0)
 ```
 
 Use the collected values directly to build the model:
 
 ```julia
-pars = running_values(constructor)
+pars = parameter_values(constructor)
 model = build_model(constructor, pars)
 pdf(model, 0.0)
 ```
@@ -65,10 +65,10 @@ Mutating helpers also recurse through the tree:
 
 ```julia
 fix!(constructor, (:σ_left, :σ_right))
-running_values(constructor)
+parameter_values(constructor)
 
 update!(constructor, (μ_left = -0.8, μ_right = 1.0, f_left = 0.55))
-running_values(constructor)
+parameter_values(constructor)
 
 release!(constructor, (:σ_left, :σ_right))
 ```
