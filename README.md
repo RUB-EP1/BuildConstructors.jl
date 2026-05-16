@@ -1,5 +1,9 @@
 # BuildConstructors.jl
 
+[![Test](https://github.com/RUB-EP1/BuildConstructors.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/RUB-EP1/BuildConstructors.jl/actions/workflows/Test.yml?query=branch%3Amain)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://RUB-EP1.github.io/BuildConstructors.jl/dev/)
+![AI contribution](https://img.shields.io/badge/significant_AI_contribution-human_in_charge-orange.svg)
+
 `BuildConstructors.jl` is a small pattern for building Julia objects whose numerical
 parameters need extra metadata: defaults, fixed/free state, bounds, uncertainties,
 or names used by a fitting backend.
