@@ -4,6 +4,7 @@ const SCRIPT_DIR = @__DIR__
 Pkg.activate(SCRIPT_DIR)
 
 include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
+include(joinpath(SCRIPT_DIR, "src", "optim_support.jl"))
 
 using BuildConstructors
 using LinearAlgebra
@@ -26,37 +27,18 @@ function selected_data()
     return loaded.data2d[1:min(sample_size, length(loaded.data2d))]
 end
 
-function diagonal_initial_inverse_hessian(problem)
-    diagonal = map(collect(problem.step)) do step
-        isfinite(step) && step > 0 ? step^2 : 0.01
-    end
-    return Matrix(Diagonal(diagonal))
-end
-
-function minuit_like_edm_callback(last_edm, tolerance, errordef)
-    goal = max(2e-3 * tolerance * errordef, 4 * sqrt(eps()))
-    return function (state)
-        if hasproperty(state, :g_x) && hasproperty(state, :invH)
-            last_edm[] = dot(state.g_x, state.invH * state.g_x) / 2
-            return isfinite(last_edm[]) && last_edm[] < goal
-        end
-        return false
-    end
-end
-
 data = selected_data()
 constructor = build_2d_constructor(length(data))
 
 fix!(constructor)
 release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
 problem = fitting_problem(constructor, data)
-densities = yield_component_densities(constructor, problem.start, data)
 
 tolerance = env_float("FIT2D_TOLERANCE", 0.01)
 errordef = 0.5
 max_calls = env_int("FIT2D_MAX_CALLS", 500)
 iterations = env_int("FIT2D_MAXITERS", 100)
-objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 0)
+objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 100_000)
 objective_calls = Ref(0)
 gradient_calls = Ref(0)
 last_edm = Ref(Inf)
@@ -71,10 +53,11 @@ end
 
 function counted_gradient!(gradient, pars)
     gradient_calls[] += 1
-    return yield_only_gradient!(gradient, densities, pars)
+    return _finite_difference_gradient!(gradient, counted_objective, problem, pars)
 end
 
-method = Fminbox(BFGS(initial_invH = _ -> diagonal_initial_inverse_hessian(problem)))
+edm_goal = _minuit_edm_goal(tolerance = tolerance, errordef = errordef)
+method = Fminbox(BFGS(initial_invH = _ -> _descriptor_inverse_hessian_matrix(problem)))
 objective = OnceDifferentiable(counted_objective, counted_gradient!, problem.start)
 options = Optim.Options(
     iterations = iterations,
@@ -91,7 +74,7 @@ options = Optim.Options(
     outer_f_abstol = 0.0,
     outer_f_reltol = 0.0,
     outer_g_abstol = 0.0,
-    callback = minuit_like_edm_callback(last_edm, tolerance, errordef),
+    callback = _optim_edm_callback(last_edm, edm_goal),
 )
 
 println("Yield-only Optim.Fminbox(BFGS) fit")
@@ -100,11 +83,11 @@ println("released: ", problem.names)
 println("start: ", problem.start)
 println("bounds: ", collect(zip(problem.lower, problem.upper)))
 println("descriptor steps: ", problem.step)
-println("initial inverse Hessian diagonal: ", diag(diagonal_initial_inverse_hessian(problem)))
+println("initial inverse Hessian diagonal: ", diag(_descriptor_inverse_hessian(problem)))
 println("initial NLL: ", problem.base)
-println("gradient: analytic yield-only gradient")
+println("gradient: descriptor-scale finite differences")
 println("iterations: ", iterations, ", max calls: ", max_calls)
-println("objective call budget: ", objective_budget == 0 ? "none" : string(objective_budget))
+println("actual objective evaluation budget: ", objective_budget == 0 ? "none" : string(objective_budget))
 
 result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
 BuildConstructors.update!(constructor, Optim.minimizer(result))
@@ -120,7 +103,7 @@ println("converged: ", Optim.converged(result))
 println("stopped by: ", result.stopped_by)
 println("EDM estimate: ", last_edm[])
 println("counted objective calls: ", objective_calls[])
-println("analytic gradient calls: ", gradient_calls[])
+println("finite-difference gradient calls: ", gradient_calls[])
 println("Optim f calls: ", Optim.f_calls(result))
 println("Optim g calls: ", Optim.g_calls(result))
 println("iterations: ", Optim.iterations(result))

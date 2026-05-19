@@ -132,6 +132,11 @@ levels of Optim evidence:
 - `Optim.Fminbox(BFGS(); Minuit metric)` uses descriptor finite-difference
   steps, a dense diagonal initial inverse Hessian with entries `step^2`, and an
   EDM-style callback.
+- The focused yield-only Optim scripts deliberately use the same
+  descriptor-scale finite-difference gradient path as the survey harness. An
+  analytic yield-only gradient is possible for this reduced problem, but it is
+  not representative of the all-parameter fit and should be treated as a
+  separate diagnostic row if reintroduced.
 
 The EDM callback mirrors the Minuit stopping idea:
 

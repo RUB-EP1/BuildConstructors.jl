@@ -22,8 +22,6 @@ export fitting_problem
 export free_parameter_names
 export load_fit_data
 export total_yield
-export yield_component_densities
-export yield_only_gradient!
 
 const MASS_MIN_GEV = 1.002
 const MASS_MAX_GEV = 1.038
@@ -220,31 +218,6 @@ function fitting_problem(constructor, data)
     base = extended_negative_log_likelihood(constructor, start, data)
     objective(p) = extended_negative_log_likelihood(constructor, p, data) - base
     return (; names, start, lower, upper, step, base, objective)
-end
-
-function yield_component_densities(constructor, pars, data)
-    model = build_model(constructor, pars)
-    n_components = Distributions.ncomponents(model)
-    return [pdf(Distributions.component(model, j), x) for x in data, j in 1:n_components]
-end
-
-function yield_only_gradient!(gradient, densities, pars)
-    yields = collect(pars)
-    fill!(gradient, 1.0)
-    for i in axes(densities, 1)
-        density = 0.0
-        for j in axes(densities, 2)
-            density += yields[j] * densities[i, j]
-        end
-        if density <= 0
-            fill!(gradient, NaN)
-            return gradient
-        end
-        for j in axes(densities, 2)
-            gradient[j] -= densities[i, j] / density
-        end
-    end
-    return gradient
 end
 
 function build_2d_constructor(n_events::Integer)
