@@ -4,12 +4,13 @@ const SCRIPT_DIR = @__DIR__
 Pkg.activate(SCRIPT_DIR)
 
 include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
+include(joinpath(SCRIPT_DIR, "src", "Minuit2CAInterface.jl"))
 
 using BuildConstructors
 using ComponentArrays
 using Distributions
-using Minuit2
 using Printf
+using .Minuit2CAInterface
 using .TwoDimensionalFitExample
 
 function env_int(name, default)
@@ -71,30 +72,36 @@ println("steps/errors: ", problem.step)
 println("initial NLL: ", problem.base)
 println("strategy: ", strategy, ", tolerance: ", tolerance, ", max calls: ", max_calls)
 
-minuit = Minuit(
+result = optimize(
     objective,
-    problem.start;
-    names = string.(keys(problem.start)),
-    limits = collect(zip(problem.lower, problem.upper)),
-    error = collect(problem.step),
-    arraycall = true,
-    errordef = 0.5,
-    tolerance,
+    problem.start,
+    Minuit2CA(;
+        strategy,
+        tolerance,
+        errordef = 0.5,
+        maxcalls = max_calls,
+        errors = problem.step,
+        lower = problem.lower,
+        upper = problem.upper,
+        names = keys(problem.start),
+    ),
 )
 
-migrad!(minuit, strategy; ncall = max_calls)
-BuildConstructors.update!(constructor, minuit.values)
+BuildConstructors.update!(constructor, minimizer(result))
 
-best_nll = problem.base + minuit.fval
+minuit = original(result)
+best_nll = problem.base + minimum(result)
 
 println()
 println("result:")
-println("best pars: ", minuit.values)
+println("best pars: ", minimizer(result))
 @printf("best NLL: %.12f\n", best_nll)
 @printf("delta NLL: %.12f\n", best_nll - problem.base)
-println("valid: ", minuit.is_valid)
-println("reached call limit: ", minuit.has_reached_call_limit)
-println("above max EDM: ", minuit.is_above_max_edm)
-println("EDM: ", minuit.edm)
-println("nfcn: ", minuit.nfcn)
-println("iterations: ", minuit.niter)
+println("converged: ", converged(result))
+println("valid: ", result.valid)
+println("reached call limit: ", result.reached_call_limit)
+println("above max EDM: ", result.above_max_edm)
+println("EDM: ", result.edm)
+println("nfcn: ", result.objective_calls)
+println("iterations: ", result.iterations)
+println("underlying Minuit errors: ", minuit.errors)

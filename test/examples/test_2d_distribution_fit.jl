@@ -4,9 +4,11 @@ using DataFrames
 using Optim
 
 include(joinpath(@__DIR__, "..", "..", "examples", "2d_distribution_fit", "src", "two_dimensional_fit.jl"))
+include(joinpath(@__DIR__, "..", "..", "examples", "2d_distribution_fit", "src", "Minuit2CAInterface.jl"))
 include(joinpath(@__DIR__, "..", "..", "examples", "2d_distribution_fit", "src", "minimizer_survey.jl"))
 
 using .TwoDimensionalFitExample
+using .Minuit2CAInterface: Minuit2CA
 using .Fit2DMinimizerSurvey
 
 @testset "2D distribution fit example" begin
@@ -56,6 +58,35 @@ using .Fit2DMinimizerSurvey
         ),
     )
     @test all(result.best_pars .>= lower_yields)
+end
+
+@testset "Minuit2 ComponentArray interface" begin
+    initial = ComponentArray(a = 1.0, b = 2.0)
+    lower = ComponentArray(a = -10.0, b = -10.0)
+    upper = ComponentArray(a = 10.0, b = 10.0)
+    errors = ComponentArray(a = 0.25, b = 0.5)
+
+    result = Minuit2CAInterface.optimize(
+        x -> sum(abs2, x),
+        initial,
+        Minuit2CA(;
+            errors,
+            lower,
+            upper,
+            maxcalls = 50,
+            tolerance = 0.01,
+        ),
+    )
+
+    @test Minuit2CAInterface.minimizer(result) isa ComponentArray
+    @test keys(Minuit2CAInterface.minimizer(result)) == (:a, :b)
+    @test Minuit2CAInterface.minimum(result) < 1e-3
+    @test Minuit2CAInterface.converged(result)
+    @test Minuit2CAInterface.original(result).names == ["a", "b"]
+    @test Minuit2CAInterface.original(result).limits == [(-10.0, 10.0), (-10.0, 10.0)]
+    @test Minuit2CAInterface._minuit_keywords(initial, Minuit2CA(; errors))[:error] == collect(errors)
+    @test Minuit2CAInterface.hesse!(result; strategy = 1, maxcalls = 20) === result
+    @test Minuit2CAInterface.original(result).errors isa ComponentArray
 end
 
 @testset "2D minimizer survey budgets" begin

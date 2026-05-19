@@ -18,6 +18,8 @@ to formulate and solve similar optimization problems.
 - The survey implementation is intentionally split by concern:
   `src/survey_core.jl` owns budgets and scoreboards,
   `src/optim_runners.jl` owns Optim setups,
+  `src/Minuit2CAInterface.jl` owns the reusable ComponentArray-friendly Minuit
+  wrapper,
   `src/minuit2_runner.jl` owns native Minuit2 setup, and
   `src/method_specs.jl` lists named benchmark cases. Keep future minimizer
   families in separate runner files rather than growing one branchy function.
@@ -63,6 +65,14 @@ to formulate and solve similar optimization problems.
 The current winning row uses the low-level `Minuit2.Minuit` API, not the
 generic `Optimization.jl` wrapper. This is deliberate:
 
+- The local `Minuit2CAInterface.optimize(objective, initial, Minuit2CA(...))`
+  wrapper keeps the API close to `Optim.optimize` while still using native
+  Minuit underneath. The objective receives a `ComponentArray`, and
+  `Minuit2CAInterface.minimizer(result)` returns a `ComponentArray`.
+- The native Minuit object is intentionally retained:
+  `Minuit2CAInterface.original(result)` returns it for diagnostics and follow-up
+  operations. `Minuit2CAInterface.hesse!(result; strategy, maxcalls)` is a
+  convenience wrapper around `Minuit2.hesse!(original(result); ...)`.
 - The benchmark passes `error = collect(problem.step)` to `Minuit`. These
   values come from `AdvancedParameter.uncertainty` and become Minuit's initial
   parameter errors / step scales.
@@ -73,12 +83,28 @@ generic `Optimization.jl` wrapper. This is deliberate:
   This is what prevents probes into negative yields and invalid shape regions.
 - The likelihood is a negative log-likelihood, so the Minuit runner sets
   `errordef = 0.5`.
-- The `Minuit2.MigradOptimizer` extension for `Optimization.jl` supports
-  bounds and `ComponentArray` reconstruction, and `sol.original` exposes the
-  underlying `Minuit` object. In the local `Minuit2 v0.4.2` source, however,
-  the extension constructs `Minuit(...; limits = ...)` without forwarding
-  `error = ...`. That means all initial parameter errors fall back to Minuit2.jl
-  default `0.1`.
+- The `Minuit2.MigradOptimizer` extension for `Optimization.jl` is attractive
+  because it accepts an `OptimizationProblem` whose `u0` is a `ComponentArray`,
+  supports `lb` / `ub`, and returns the original `Minuit` object in
+  `sol.original`. This would be the preferred interface if it exposed the full
+  Minuit configuration needed by the benchmark.
+- In the local package stack, `Minuit2 v0.4.2` with the currently resolved
+  `Optimization.jl` does not run: `solve(prob, MigradOptimizer(...))` errors
+  inside `Minuit2OptimizationExt` because it calls
+  `Optimization._check_and_convert_maxiters`, which is not available in this
+  `Optimization.jl` version. This should be checked again after resolving or
+  updating the example environment.
+- Even after that compatibility issue is fixed, the current extension
+  constructs `Minuit(_loss, prob.u0; limits = ...)` without forwarding
+  `error = collect(problem.step)`. That means all initial parameter errors fall
+  back to Minuit2.jl default `0.1`, losing the descriptor-derived step scales
+  that appear to be central to the winning native-Minuit setup.
+- The current `MigradOptimizer` fields are only `strategy`, `tolerance`,
+  `errordef`, and `maxfcn`. The `OptimizationProblem` supplies `u0`, `lb`, and
+  `ub`; `solve(..., maxiters = n)` is mapped to the Migrad call limit. Missing
+  for this benchmark are per-parameter Minuit errors / steps, fixed-parameter
+  masks, native `migrad!` retry controls such as `iterate` and `use_simplex`,
+  and post-fit actions such as `hesse!` / `minos!`.
 - `migrad!` uses first derivatives and an approximate second-derivative
   variable-metric update. The step/error values provide the initial scale for
   numerical derivative and covariance handling; they are not a full user-supplied
