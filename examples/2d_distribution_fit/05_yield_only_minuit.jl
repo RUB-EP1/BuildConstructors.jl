@@ -7,8 +7,6 @@ include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
 include(joinpath(SCRIPT_DIR, "src", "Minuit2CAInterface.jl"))
 
 using BuildConstructors
-using ComponentArrays
-using Distributions
 using Printf
 using .Minuit2CAInterface
 using .TwoDimensionalFitExample
@@ -28,36 +26,13 @@ function selected_data()
     return loaded.data2d[1:min(sample_size, length(loaded.data2d))]
 end
 
-function yield_density_matrix(constructor, problem, data)
-    model = build_model(constructor, problem.start)
-    n_components = Distributions.ncomponents(model)
-    return [pdf(Distributions.component(model, j), x) for x in data, j in 1:n_components]
-end
-
-function yield_objective(densities, base_nll)
-    return function (pars)
-        yields = collect(pars)
-        nll = sum(yields)
-        for i in axes(densities, 1)
-            density = 0.0
-            for j in axes(densities, 2)
-                density += yields[j] * densities[i, j]
-            end
-            density > 0 || return Inf
-            nll -= log(density)
-        end
-        return nll - base_nll
-    end
-end
-
 data = selected_data()
 constructor = build_2d_constructor(length(data))
 
 fix!(constructor)
 release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
 problem = fitting_problem(constructor, data)
-densities = yield_density_matrix(constructor, problem, data)
-objective = yield_objective(densities, problem.base)
+objective = problem.objective
 
 tolerance = env_float("FIT2D_TOLERANCE", 0.01)
 max_calls = env_int("FIT2D_MAX_CALLS", 500)

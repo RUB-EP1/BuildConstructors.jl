@@ -6,8 +6,6 @@ Pkg.activate(SCRIPT_DIR)
 include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
 
 using BuildConstructors
-using ComponentArrays
-using Distributions
 using LinearAlgebra
 using Optim
 using Printf
@@ -26,47 +24,6 @@ function selected_data()
     sample_size = env_int("FIT2D_SAMPLE_SIZE", 250)
     sample_size <= 0 && return loaded.data2d
     return loaded.data2d[1:min(sample_size, length(loaded.data2d))]
-end
-
-function yield_density_matrix(constructor, problem, data)
-    model = build_model(constructor, problem.start)
-    n_components = Distributions.ncomponents(model)
-    return [pdf(Distributions.component(model, j), x) for x in data, j in 1:n_components]
-end
-
-function yield_objective(densities, base_nll)
-    return function (pars)
-        yields = collect(pars)
-        nll = sum(yields)
-        for i in axes(densities, 1)
-            density = 0.0
-            for j in axes(densities, 2)
-                density += yields[j] * densities[i, j]
-            end
-            density > 0 || return Inf
-            nll -= log(density)
-        end
-        return nll - base_nll
-    end
-end
-
-function yield_gradient!(gradient, densities, pars)
-    yields = collect(pars)
-    fill!(gradient, 1.0)
-    for i in axes(densities, 1)
-        density = 0.0
-        for j in axes(densities, 2)
-            density += yields[j] * densities[i, j]
-        end
-        if density <= 0
-            fill!(gradient, NaN)
-            return gradient
-        end
-        for j in axes(densities, 2)
-            gradient[j] -= densities[i, j] / density
-        end
-    end
-    return gradient
 end
 
 function diagonal_initial_inverse_hessian(problem)
@@ -93,8 +50,7 @@ constructor = build_2d_constructor(length(data))
 fix!(constructor)
 release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
 problem = fitting_problem(constructor, data)
-densities = yield_density_matrix(constructor, problem, data)
-yield_nll = yield_objective(densities, problem.base)
+densities = yield_component_densities(constructor, problem.start, data)
 
 tolerance = env_float("FIT2D_TOLERANCE", 0.01)
 errordef = 0.5
@@ -110,12 +66,12 @@ function counted_objective(pars)
     if objective_budget > 0 && objective_calls[] > objective_budget
         error("objective call budget exceeded: $(objective_calls[]) > $(objective_budget)")
     end
-    return yield_nll(pars)
+    return problem.objective(pars)
 end
 
 function counted_gradient!(gradient, pars)
     gradient_calls[] += 1
-    return yield_gradient!(gradient, densities, pars)
+    return yield_only_gradient!(gradient, densities, pars)
 end
 
 method = Fminbox(BFGS(initial_invH = _ -> diagonal_initial_inverse_hessian(problem)))
