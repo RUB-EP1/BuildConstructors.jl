@@ -17,28 +17,49 @@ PhysicsModelsExt = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistr
 
 [compat]
 ComponentArrays = ">=0.15"
+Arrow = ">=2.8"
+DataFrames = ">=1.8"
+Dates = ">=1"
 Distributions = ">=0.25"
 DistributionsHEP = ">=0.5.0"
 JSON = ">=0.21.4"
+LinearAlgebra = ">=1"
+Minuit2 = ">=0.3"
 NumericalDistributions = ">=0.5.3"
+Optim = ">=2"
 OrderedCollections = "1.8.1"
+Printf = ">=1"
 julia = "1.9"
 Test = ">=1"
 
 [extras]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DistributionsHEP = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Minuit2 = "37821647-3276-4ed8-9a4e-bc9886b3c106"
 NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = [
     "Test",
+    "Arrow",
     "ComponentArrays",
+    "DataFrames",
+    "Dates",
     "Distributions",
     "DistributionsHEP",
     "JSON",
+    "LinearAlgebra",
+    "Minuit2",
     "NumericalDistributions",
+    "Optim",
+    "Printf",
 ]
