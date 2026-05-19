@@ -204,45 +204,61 @@ function write_results_csv(path::AbstractString, results; append::Bool = false)
     return path
 end
 
+function _scoreboard_status(row)
+    row.converged && return "ok"
+    row.budget_exceeded && return "budget"
+    row.errored && return "error"
+    return "no"
+end
+
+function _scoreboard_edm(row)
+    if !ismissing(row.minuit_edm)
+        return row.minuit_edm
+    elseif !ismissing(row.optim_edm)
+        return row.optim_edm
+    end
+    return missing
+end
+
+_scoreboard_number(value; digits = 3) =
+    ismissing(value) ? "" : isfinite(value) ? string(round(value; digits)) : string(value)
+
+function _ranked_scoreboard_rows(results)
+    finite_rows = filter(row -> isfinite(row.best_nll), results)
+    other_rows = filter(row -> !isfinite(row.best_nll), results)
+    return vcat(sort(finite_rows; by = row -> row.best_nll), other_rows)
+end
+
 function write_markdown_summary(path::AbstractString, results)
     isempty(results) && error("No results to summarize")
     mkpath(dirname(path))
+    ranked_results = _ranked_scoreboard_rows(results)
+    best_nll = first(ranked_results).best_nll
     open(path, "w") do io
         println(io, "# 2D fit minimizer survey")
         println(io)
         println(io, "Generated: ", Dates.format(now(), dateformat"yyyy-mm-dd HH:MM:SS"))
         println(io)
-        println(io, "| stage | method | bounded | events | maxiters | calls | max calls | max seconds | converged | iterations | best nll | edm | seconds | budget | errored |")
-        println(io, "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
-        for row in results
-            iterations = ismissing(row.iterations) ? "" : string(row.iterations)
-            edm = if !ismissing(row.minuit_edm)
-                string(row.minuit_edm)
-            elseif !ismissing(row.optim_edm)
-                string(row.optim_edm)
-            else
-                ""
-            end
+        println(io, "| rank | stage | method | status | best NLL | ΔNLL | calls | sec | edm |")
+        println(io, "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |")
+        for (rank, row) in enumerate(ranked_results)
+            delta_nll = isfinite(row.best_nll) && isfinite(best_nll) ? row.best_nll - best_nll : missing
             @printf(
                 io,
-                "| %s | %s | %s | %d | %d | %d | %d | %.3f | %s | %s | %.6f | %s | %.3f | %s | %s |\n",
+                "| %d | %s | %s | %s | %s | %s | %d | %.3f | %s |\n",
+                rank,
                 row.stage,
                 row.method,
-                row.bounded,
-                row.n_events,
-                row.maxiters,
+                _scoreboard_status(row),
+                _scoreboard_number(row.best_nll; digits = 6),
+                _scoreboard_number(delta_nll; digits = 6),
                 row.objective_calls,
-                row.max_objective_calls,
-                row.max_seconds,
-                row.converged,
-                iterations,
-                row.best_nll,
-                edm,
                 row.elapsed_seconds,
-                row.budget_exceeded,
-                row.errored,
+                _scoreboard_number(_scoreboard_edm(row); digits = 6),
             )
         end
+        println(io)
+        println(io, "Status: `ok` converged, `budget` hit the configured computation budget, `error` threw before convergence, `no` stopped without convergence.")
     end
     return path
 end

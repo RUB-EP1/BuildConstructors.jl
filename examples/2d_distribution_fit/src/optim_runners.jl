@@ -139,7 +139,7 @@ function _minuit_like_optim_options(maxiters, max_objective_calls, max_seconds, 
         outer_f_abstol = 0.0,
         outer_f_reltol = 0.0,
         outer_g_abstol = 0.0,
-        callback,
+        callback = callback,
     )
 end
 
