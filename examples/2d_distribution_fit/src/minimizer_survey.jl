@@ -3,7 +3,6 @@ module Fit2DMinimizerSurvey
 using BuildConstructors
 using Dates
 using LinearAlgebra
-using Minuit2
 using Optim
 using Printf
 
@@ -19,6 +18,7 @@ export write_results_csv
 
 include("survey_core.jl")
 include("optim_runners.jl")
+include("Minuit2CAInterface.jl")
 include("minuit2_runner.jl")
 include("method_specs.jl")
 

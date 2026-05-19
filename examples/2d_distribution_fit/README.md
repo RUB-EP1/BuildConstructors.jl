@@ -48,6 +48,9 @@ The known failure modes are:
 - `src/survey_core.jl`: shared budget, stage, scoreboard, and CSV/Markdown
   mechanics.
 - `src/optim_runners.jl`: Optim-specific runners and tuned Optim settings.
+- `src/Minuit2CAInterface.jl`: compact reusable Minuit2 wrapper for
+  `ComponentArray` starts, named `ComponentArray` minimizers, bounds, Minuit
+  errors / steps, Migrad settings, and optional Hesse.
 - `src/minuit2_runner.jl`: native Minuit2 runner using limits and descriptor
   step sizes.
 - `src/method_specs.jl`: named benchmark cases. Add new minimizer

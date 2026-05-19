@@ -9,30 +9,33 @@ function _run_backend(
     max_seconds,
 )
     settings = method_spec.method_factory()
-    minuit = Minuit(
+    result = Minuit2CAInterface.optimize(
         objective,
-        problem.start;
-        names = string.(keys(problem.start)),
-        limits = collect(zip(problem.lower, problem.upper)),
-        error = collect(problem.step),
-        arraycall = true,
-        errordef = 0.5,
-        tolerance = settings.tolerance,
+        problem.start,
+        Minuit2CAInterface.Minuit2CA(;
+            strategy = settings.strategy,
+            tolerance = settings.tolerance,
+            errordef = 0.5,
+            maxcalls = max_objective_calls,
+            errors = problem.step,
+            lower = problem.lower,
+            upper = problem.upper,
+            names = keys(problem.start),
+            run_hesse = get(settings, :hesse, false),
+        ),
     )
-    migrad!(minuit, settings.strategy; ncall = max_objective_calls)
-    get(settings, :hesse, false) && hesse!(minuit)
-    BuildConstructors.update!(constructor, minuit.values)
+    BuildConstructors.update!(constructor, Minuit2CAInterface.minimizer(result))
     return (;
-        best_pars = minuit.values,
-        best_objective = minuit.fval,
-        converged = minuit.is_valid && !minuit.has_reached_call_limit && !minuit.is_above_max_edm,
-        iterations = minuit.niter,
+        best_pars = Minuit2CAInterface.minimizer(result),
+        best_objective = Minuit2CAInterface.minimum(result),
+        converged = Minuit2CAInterface.converged(result),
+        iterations = result.iterations,
         diagnostics = (;
             _missing_diagnostics()...,
-            minuit_edm = minuit.edm,
-            minuit_nfcn = minuit.nfcn,
-            minuit_valid = minuit.is_valid,
-            minuit_call_limit = minuit.has_reached_call_limit,
+            minuit_edm = result.edm,
+            minuit_nfcn = result.objective_calls,
+            minuit_valid = result.valid,
+            minuit_call_limit = result.reached_call_limit,
         ),
     )
 end
