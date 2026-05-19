@@ -20,7 +20,7 @@ The physics model has three extended-yield components:
 The main questions for this study are:
 
 - Compare a list of `Optim.jl` minimizers with their default settings.
-- Compare `Optim.LBFGS()` / `Optim.LFGS()` with accurate configuration:
+- Compare `Optim.LBFGS()` / `Optim.BFGS()` with accurate configuration:
   starting step sizes, finite-difference scales, and parameter bounds.
 - Tune `Optim.Fminbox(LBFGS())` and `Optim.Fminbox(BFGS())` against the Minuit
   reference by matching descriptor step sizes, initial inverse-Hessian scale,
@@ -55,13 +55,21 @@ The known failure modes are:
 - `03_fit_2d.jl`: runnable reproduction script with the current staged strategy.
 - `04_minimizer_survey.jl`: small command-line survey runner that writes CSV and
   Markdown results under `results/`.
+- `05_yield_only_minuit.jl`: focused yield-only reference fit with native
+  `Minuit2.Migrad(strategy=1)`, explicit limits, and descriptor step sizes.
+- `06_yield_only_optim_bfgs.jl`: the same yield-only fit with
+  `Optim.Fminbox(BFGS())`, analytic gradient, descriptor-scale initial inverse
+  Hessian, and an EDM-style callback.
+- `07_yield_only_optim_lbfgs.jl`: the same yield-only fit with
+  `Optim.Fminbox(LBFGS())`, analytic gradient, descriptor-scale diagonal
+  preconditioner, and the same budgeted stopping style.
 - `HANDOVER.md`: research notes, current observations, and follow-up plan.
 
 ## Running
 
 From the repository root:
 
-```julia
+```bash
 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/03_fit_2d.jl
 ```
 
@@ -70,10 +78,18 @@ dataset, and fit strategy stable while minimizer configurations are varied.
 
 Run a small minimizer survey:
 
-```julia
+```bash
 FIT2D_SAMPLE_SIZE=250 FIT2D_MAXITERS=25 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/04_minimizer_survey.jl
 ```
 
 Survey attempts are budgeted by iterations, objective calls, and wall-clock time.
 Use `FIT2D_MAX_CALLS` and `FIT2D_MAX_SECONDS` to tighten or relax that budget.
 The CSV scoreboard appends by default; set `FIT2D_APPEND=false` to rewrite it.
+
+Run the focused yield-only comparison:
+
+```bash
+FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/05_yield_only_minuit.jl
+FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/06_yield_only_optim_bfgs.jl
+FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/07_yield_only_optim_lbfgs.jl
+```

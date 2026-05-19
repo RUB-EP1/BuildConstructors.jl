@@ -77,3 +77,28 @@ end
     @test results[1].objective_calls == 2
     @test results[1].budget_reason == "objective call budget exceeded"
 end
+
+@testset "2D tuned Optim survey setup" begin
+    loaded = load_fit_data()
+    stages = [StageSpec("yield_only", (:y_phiphi, :y_mixed, :y_kkkk), "tuned Optim smoke test")]
+    methods = [MethodSpec(
+        "Optim.Fminbox(BFGS(); Minuit metric)",
+        () -> (tolerance = 0.01, errordef = 0.5),
+        true,
+        :optim_minuit_bfgs,
+        "tuned Optim smoke test",
+    )]
+
+    results = run_survey(
+        loaded.data2d[1:10];
+        stages,
+        methods,
+        maxiters = 1,
+        max_objective_calls = 20,
+        max_seconds = 30.0,
+    )
+
+    @test length(results) == 1
+    @test results[1].objective_calls > 0
+    @test results[1].error_type != "MethodError"
+end

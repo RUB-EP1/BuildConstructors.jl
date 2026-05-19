@@ -1,0 +1,170 @@
+using Pkg
+
+const SCRIPT_DIR = @__DIR__
+Pkg.activate(SCRIPT_DIR)
+
+include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
+
+using BuildConstructors
+using ComponentArrays
+using Distributions
+using LinearAlgebra
+using Optim
+using Printf
+using .TwoDimensionalFitExample
+
+function env_int(name, default)
+    return parse(Int, get(ENV, name, string(default)))
+end
+
+function env_float(name, default)
+    return parse(Float64, get(ENV, name, string(default)))
+end
+
+function selected_data()
+    loaded = load_fit_data()
+    sample_size = env_int("FIT2D_SAMPLE_SIZE", 250)
+    sample_size <= 0 && return loaded.data2d
+    return loaded.data2d[1:min(sample_size, length(loaded.data2d))]
+end
+
+function yield_density_matrix(constructor, problem, data)
+    model = build_model(constructor, problem.start)
+    n_components = Distributions.ncomponents(model)
+    return [pdf(Distributions.component(model, j), x) for x in data, j in 1:n_components]
+end
+
+function yield_objective(densities, base_nll)
+    return function (pars)
+        yields = collect(pars)
+        nll = sum(yields)
+        for i in axes(densities, 1)
+            density = 0.0
+            for j in axes(densities, 2)
+                density += yields[j] * densities[i, j]
+            end
+            density > 0 || return Inf
+            nll -= log(density)
+        end
+        return nll - base_nll
+    end
+end
+
+function yield_gradient!(gradient, densities, pars)
+    yields = collect(pars)
+    fill!(gradient, 1.0)
+    for i in axes(densities, 1)
+        density = 0.0
+        for j in axes(densities, 2)
+            density += yields[j] * densities[i, j]
+        end
+        if density <= 0
+            fill!(gradient, NaN)
+            return gradient
+        end
+        for j in axes(densities, 2)
+            gradient[j] -= densities[i, j] / density
+        end
+    end
+    return gradient
+end
+
+function diagonal_initial_inverse_hessian(problem)
+    diagonal = map(collect(problem.step)) do step
+        isfinite(step) && step > 0 ? step^2 : 0.01
+    end
+    return Matrix(Diagonal(diagonal))
+end
+
+function minuit_like_edm_callback(last_edm, tolerance, errordef)
+    goal = max(2e-3 * tolerance * errordef, 4 * sqrt(eps()))
+    return function (state)
+        if hasproperty(state, :g_x) && hasproperty(state, :invH)
+            last_edm[] = dot(state.g_x, state.invH * state.g_x) / 2
+            return isfinite(last_edm[]) && last_edm[] < goal
+        end
+        return false
+    end
+end
+
+data = selected_data()
+constructor = build_2d_constructor(length(data))
+
+fix!(constructor)
+release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
+problem = fitting_problem(constructor, data)
+densities = yield_density_matrix(constructor, problem, data)
+yield_nll = yield_objective(densities, problem.base)
+
+tolerance = env_float("FIT2D_TOLERANCE", 0.01)
+errordef = 0.5
+max_calls = env_int("FIT2D_MAX_CALLS", 500)
+iterations = env_int("FIT2D_MAXITERS", 100)
+objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 0)
+objective_calls = Ref(0)
+gradient_calls = Ref(0)
+last_edm = Ref(Inf)
+
+function counted_objective(pars)
+    objective_calls[] += 1
+    if objective_budget > 0 && objective_calls[] > objective_budget
+        error("objective call budget exceeded: $(objective_calls[]) > $(objective_budget)")
+    end
+    return yield_nll(pars)
+end
+
+function counted_gradient!(gradient, pars)
+    gradient_calls[] += 1
+    return yield_gradient!(gradient, densities, pars)
+end
+
+method = Fminbox(BFGS(initial_invH = _ -> diagonal_initial_inverse_hessian(problem)))
+objective = OnceDifferentiable(counted_objective, counted_gradient!, problem.start)
+options = Optim.Options(
+    iterations = iterations,
+    outer_iterations = iterations,
+    f_calls_limit = max_calls,
+    g_calls_limit = max_calls,
+    x_abstol = 0.0,
+    x_reltol = 0.0,
+    f_abstol = 0.0,
+    f_reltol = 0.0,
+    g_abstol = 0.0,
+    outer_x_abstol = 0.0,
+    outer_x_reltol = 0.0,
+    outer_f_abstol = 0.0,
+    outer_f_reltol = 0.0,
+    outer_g_abstol = 0.0,
+    callback = minuit_like_edm_callback(last_edm, tolerance, errordef),
+)
+
+println("Yield-only Optim.Fminbox(BFGS) fit")
+println("events: ", length(data))
+println("released: ", problem.names)
+println("start: ", problem.start)
+println("bounds: ", collect(zip(problem.lower, problem.upper)))
+println("descriptor steps: ", problem.step)
+println("initial inverse Hessian diagonal: ", diag(diagonal_initial_inverse_hessian(problem)))
+println("initial NLL: ", problem.base)
+println("gradient: analytic yield-only gradient")
+println("iterations: ", iterations, ", max calls: ", max_calls)
+println("objective call budget: ", objective_budget == 0 ? "none" : string(objective_budget))
+
+result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
+BuildConstructors.update!(constructor, Optim.minimizer(result))
+
+best_nll = problem.base + Optim.minimum(result)
+
+println()
+println("result:")
+println("best pars: ", Optim.minimizer(result))
+@printf("best NLL: %.12f\n", best_nll)
+@printf("delta NLL: %.12f\n", best_nll - problem.base)
+println("converged: ", Optim.converged(result))
+println("stopped by: ", result.stopped_by)
+println("EDM estimate: ", last_edm[])
+println("counted objective calls: ", objective_calls[])
+println("analytic gradient calls: ", gradient_calls[])
+println("Optim f calls: ", Optim.f_calls(result))
+println("Optim g calls: ", Optim.g_calls(result))
+println("iterations: ", Optim.iterations(result))
