@@ -4,6 +4,7 @@ const SCRIPT_DIR = @__DIR__
 Pkg.activate(SCRIPT_DIR)
 
 include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
+include(joinpath(SCRIPT_DIR, "src", "optim_support.jl"))
 
 using BuildConstructors
 using LinearAlgebra
@@ -26,60 +27,39 @@ function selected_data()
     return loaded.data2d[1:min(sample_size, length(loaded.data2d))]
 end
 
-function descriptor_box_precondprep(problem)
-    inverse_hessian_diagonal = map(collect(problem.step)) do step
-        isfinite(step) && step > 0 ? step^2 : 0.01
-    end
-    hessian_diagonal = @. 1 / inverse_hessian_diagonal
-    return function (P, x, lower, upper, dfbox)
-        @. P.diag = 1 / (dfbox.mu * (1 / (x - lower)^2 + 1 / (upper - x)^2) + hessian_diagonal)
-        return P
-    end
-end
-
-function diagonal_edm_callback(problem, last_edm, tolerance, errordef)
-    goal = max(2e-3 * tolerance * errordef, 4 * sqrt(eps()))
-    inverse_hessian_diagonal = map(collect(problem.step)) do step
-        isfinite(step) && step > 0 ? step^2 : 0.01
-    end
-    return function (state)
-        if hasproperty(state, :g_x)
-            last_edm[] = dot(state.g_x, inverse_hessian_diagonal .* state.g_x) / 2
-            return isfinite(last_edm[]) && last_edm[] < goal
-        end
-        return false
-    end
-end
-
 data = selected_data()
 constructor = build_2d_constructor(length(data))
 
 fix!(constructor)
 release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
 problem = fitting_problem(constructor, data)
-densities = yield_component_densities(constructor, problem.start, data)
 
 tolerance = env_float("FIT2D_TOLERANCE", 0.01)
 errordef = 0.5
 max_calls = env_int("FIT2D_MAX_CALLS", 500)
 iterations = env_int("FIT2D_MAXITERS", 100)
 memory = env_int("FIT2D_LBFGS_MEMORY", 10)
+objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 100_000)
 objective_calls = Ref(0)
 gradient_calls = Ref(0)
 last_edm = Ref(Inf)
 
 function counted_objective(pars)
     objective_calls[] += 1
+    if objective_budget > 0 && objective_calls[] > objective_budget
+        error("objective call budget exceeded: $(objective_calls[]) > $(objective_budget)")
+    end
     return problem.objective(pars)
 end
 
 function counted_gradient!(gradient, pars)
     gradient_calls[] += 1
-    return yield_only_gradient!(gradient, densities, pars)
+    return _finite_difference_gradient!(gradient, counted_objective, problem, pars)
 end
 
+edm_goal = _minuit_edm_goal(tolerance = tolerance, errordef = errordef)
 inner = LBFGS(m = memory, scaleinvH0 = false)
-method = Fminbox(inner; precondprep = descriptor_box_precondprep(problem))
+method = Fminbox(inner; precondprep = _descriptor_box_precondprep(problem))
 objective = OnceDifferentiable(counted_objective, counted_gradient!, problem.start)
 options = Optim.Options(
     iterations = iterations,
@@ -96,7 +76,7 @@ options = Optim.Options(
     outer_f_abstol = 0.0,
     outer_f_reltol = 0.0,
     outer_g_abstol = 0.0,
-    callback = diagonal_edm_callback(problem, last_edm, tolerance, errordef),
+    callback = _optim_diagonal_edm_callback(problem, last_edm, edm_goal),
 )
 
 println("Yield-only Optim.Fminbox(LBFGS) fit")
@@ -107,8 +87,9 @@ println("bounds: ", collect(zip(problem.lower, problem.upper)))
 println("descriptor steps: ", problem.step)
 println("preconditioner starts from step^2 diagonal through Fminbox barrier")
 println("initial NLL: ", problem.base)
-println("gradient: analytic yield-only gradient")
+println("gradient: descriptor-scale finite differences")
 println("memory: ", memory, ", iterations: ", iterations, ", max calls: ", max_calls)
+println("actual objective evaluation budget: ", objective_budget == 0 ? "none" : string(objective_budget))
 
 result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
 BuildConstructors.update!(constructor, Optim.minimizer(result))
@@ -124,7 +105,7 @@ println("converged: ", Optim.converged(result))
 println("stopped by: ", result.stopped_by)
 println("diagonal EDM proxy: ", last_edm[])
 println("counted objective calls: ", objective_calls[])
-println("analytic gradient calls: ", gradient_calls[])
+println("finite-difference gradient calls: ", gradient_calls[])
 println("Optim f calls: ", Optim.f_calls(result))
 println("Optim g calls: ", Optim.g_calls(result))
 println("iterations: ", Optim.iterations(result))

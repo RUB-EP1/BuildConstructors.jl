@@ -17,6 +17,7 @@ export write_markdown_summary
 export write_results_csv
 
 include("survey_core.jl")
+include("optim_support.jl")
 include("optim_runners.jl")
 include("Minuit2CAInterface.jl")
 include("minuit2_runner.jl")
