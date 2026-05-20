@@ -25,6 +25,28 @@ bc_docs_doctest_only = get(ENV, "BC_DOCS_DOCTEST_ONLY", "false") == "true"
 bc_docs_doctest_only && doctest(BuildConstructors)
 
 !bc_docs_doctest_only && begin
+    const FIT2D_MODEL_SOURCE = joinpath(
+        @__DIR__,
+        "..",
+        "examples",
+        "2d_distribution_fit",
+        "literate",
+        "two_dimensional_fit.jl",
+    )
+
+    Literate.script(
+        FIT2D_MODEL_SOURCE,
+        joinpath(@__DIR__, "..", "examples", "2d_distribution_fit", "src");
+        credit=false,
+    )
+    Literate.markdown(
+        FIT2D_MODEL_SOURCE,
+        joinpath(@__DIR__, "src", "tutorials");
+        documenter=false,
+        execute=false,
+        credit=false,
+    )
+
     const LITERATE_TUTORIALS = [
         "2d-fit-benchmark-framework.jl",
         "2d-minuit2-componentarrays-study.jl",
@@ -62,6 +84,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
                 "Optim with ComponentArrays" => "tutorials/optim-componentarrays.md",
                 "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
                 "2D Fit Benchmark Framework" => "tutorials/2d-fit-benchmark-framework.md",
+                "2D Fit Model Definition" => "tutorials/two_dimensional_fit.md",
                 "2D Minuit2 Study" => "tutorials/2d-minuit2-componentarrays-study.md",
                 "2D Optim Minuit Settings" => "tutorials/2d-optim-minuit-settings.md",
                 "2D Optim Derivatives" => "tutorials/2d-optim-derivatives.md",
