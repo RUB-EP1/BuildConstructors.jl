@@ -211,3 +211,7 @@ end
 @testset "Flexible Parameter" begin
     include("test-parameter.jl")
 end
+
+@testset "Examples" begin
+    include("examples/test_2d_distribution_fit.jl")
+end
