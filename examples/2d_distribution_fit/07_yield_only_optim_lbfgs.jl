@@ -41,7 +41,6 @@ iterations = env_int("FIT2D_MAXITERS", 100)
 memory = env_int("FIT2D_LBFGS_MEMORY", 10)
 objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 100_000)
 objective_calls = Ref(0)
-gradient_calls = Ref(0)
 last_edm = Ref(Inf)
 
 function counted_objective(pars)
@@ -52,15 +51,9 @@ function counted_objective(pars)
     return problem.objective(pars)
 end
 
-function counted_gradient!(gradient, pars)
-    gradient_calls[] += 1
-    return _finite_difference_gradient!(gradient, counted_objective, problem, pars)
-end
-
 edm_goal = _minuit_edm_goal(tolerance = tolerance, errordef = errordef)
 inner = LBFGS(m = memory, scaleinvH0 = false)
 method = Fminbox(inner; precondprep = _descriptor_box_precondprep(problem))
-objective = OnceDifferentiable(counted_objective, counted_gradient!, problem.start)
 options = Optim.Options(
     iterations = iterations,
     outer_iterations = iterations,
@@ -87,11 +80,11 @@ println("bounds: ", collect(zip(problem.lower, problem.upper)))
 println("descriptor steps: ", problem.step)
 println("preconditioner starts from step^2 diagonal through Fminbox barrier")
 println("initial NLL: ", problem.base)
-println("gradient: descriptor-scale finite differences")
+println("gradient: Optim/NLSolversBase default central finite differences")
 println("memory: ", memory, ", iterations: ", iterations, ", max calls: ", max_calls)
 println("actual objective evaluation budget: ", objective_budget == 0 ? "none" : string(objective_budget))
 
-result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
+result = optimize(counted_objective, problem.lower, problem.upper, problem.start, method, options)
 BuildConstructors.update!(constructor, Optim.minimizer(result))
 
 best_nll = problem.base + Optim.minimum(result)
@@ -105,7 +98,6 @@ println("converged: ", Optim.converged(result))
 println("stopped by: ", result.stopped_by)
 println("diagonal EDM proxy: ", last_edm[])
 println("counted objective calls: ", objective_calls[])
-println("finite-difference gradient calls: ", gradient_calls[])
 println("Optim f calls: ", Optim.f_calls(result))
 println("Optim g calls: ", Optim.g_calls(result))
 println("iterations: ", Optim.iterations(result))
