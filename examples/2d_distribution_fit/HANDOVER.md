@@ -119,24 +119,22 @@ generic `Optimization.jl` wrapper. This is deliberate:
 ## Optim configuration notes
 
 The Optim comparison should be made as close as possible to the Minuit reference
-before declaring that Optim is slower or worse. The harness now keeps three
-levels of Optim evidence:
+before declaring that Optim is slower or worse. The harness now keeps two tuned
+Optim rows:
 
-- `Optim.Fminbox(LBFGS(); descriptor steps)` uses the same descriptor
-  uncertainties for finite-difference gradients.
-- `Optim.Fminbox(LBFGS(); Minuit metric)` additionally uses a descriptor-scaled
+- `Optim.Fminbox(LBFGS(); Minuit metric)` uses a descriptor-scaled
   diagonal preconditioner. Since `Fminbox` supplies its own barrier
   preconditioner to the inner `LBFGS`, the descriptor metric is injected through
   a custom `precondprep` that combines the box-barrier Hessian with
-  `1 / step^2`.
-- `Optim.Fminbox(BFGS(); Minuit metric)` uses descriptor finite-difference
-  steps, a dense diagonal initial inverse Hessian with entries `step^2`, and an
-  EDM-style callback.
-- The focused yield-only Optim scripts deliberately use the same
-  descriptor-scale finite-difference gradient path as the survey harness. An
-  analytic yield-only gradient is possible for this reduced problem, but it is
-  not representative of the all-parameter fit and should be treated as a
-  separate diagnostic row if reintroduced.
+  `1 / step^2`. Derivatives are Optim/NLSolversBase default central finite
+  differences, not descriptor-scale finite differences.
+- `Optim.Fminbox(BFGS(); Minuit metric)` uses Optim/NLSolversBase default
+  central finite differences, a dense diagonal initial inverse Hessian with
+  entries `step^2`, and an EDM-style callback.
+- The focused yield-only Optim scripts use the same fair numerical-derivative
+  path. An analytic yield-only gradient is possible for this reduced problem,
+  but it is not representative of the all-parameter fit and should be treated as
+  a separate diagnostic row if reintroduced.
 
 The EDM callback mirrors the Minuit stopping idea:
 
@@ -153,10 +151,10 @@ from the descriptor metric. This distinction should remain visible in the
 scoreboard notes.
 
 New Optim cases should be added as explicit named configurations, for example
-vanilla `Fminbox(LBFGS())`, descriptor finite-difference steps, descriptor
-preconditioning, full-memory `BFGS` with initial inverse Hessian, or alternate
-line searches. The point is to build a large collection of small readable cases
-that demonstrate how setup choices change performance.
+vanilla `Fminbox(LBFGS())`, descriptor preconditioning, full-memory `BFGS` with
+initial inverse Hessian, alternate line searches, or alternate AD backends. The
+point is to build a large collection of small readable cases that demonstrate
+how setup choices change performance.
 
 ## Research axes
 
@@ -177,8 +175,9 @@ that demonstrate how setup choices change performance.
 3. Step size and scale
 
    `AdvancedParameter.uncertainty` should become the central source of initial
-   step sizes. This is especially important for Minuit and for finite-difference
-   gradients in `Optim`.
+   step sizes and optimizer metrics. It should not be reused as the
+   finite-difference epsilon for `Optim`; Optim/NLSolversBase already chooses
+   derivative perturbations for that role.
 
 4. Staged strategy
 
@@ -199,17 +198,15 @@ that demonstrate how setup choices change performance.
 ## Suggested next experiments
 
 1. Add objective-call counting around `fitting_problem.objective`.
-2. Add a bounded `LBFGS` configuration that uses descriptor uncertainties as
-   finite-difference absolute steps.
-3. Extend the low-level `Minuit2.Minuit` runner with staged warm starts and
+2. Extend the low-level `Minuit2.Minuit` runner with staged warm starts and
    optional `simplex!` fallback before `migrad!`.
-4. Add Minuit strategy rows to staged workflows, not only `all_free`, to test
+3. Add Minuit strategy rows to staged workflows, not only `all_free`, to test
    whether staged release still improves robustness and final likelihood.
-5. Add one survey mode on a small deterministic subset and one on the full
+4. Add one survey mode on a small deterministic subset and one on the full
    dataset. Keep the small mode in CI; keep the full mode manual.
-6. Save fitted parameters as structured data, not just strings, once the result
+5. Save fitted parameters as structured data, not just strings, once the result
    schema stabilizes.
-7. Add plots of likelihood scans for single parameters around the current best
+6. Add plots of likelihood scans for single parameters around the current best
    point, especially `mu_B`, yields, and `k_bkg_kk`.
 
 ## Commands

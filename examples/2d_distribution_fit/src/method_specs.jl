@@ -2,25 +2,18 @@ function default_method_specs()
     return MethodSpec[
         MethodSpec("Optim.Fminbox(LBFGS())", () -> Fminbox(LBFGS()), true, "Bounded quasi-Newton baseline."),
         MethodSpec(
-            "Optim.Fminbox(LBFGS(); descriptor steps)",
-            () -> Fminbox(LBFGS()),
-            true,
-            :optim_descriptor_steps,
-            "Bounded LBFGS with finite-difference steps from parameter uncertainties.",
-        ),
-        MethodSpec(
             "Optim.Fminbox(LBFGS(); Minuit metric)",
             () -> (method = LBFGS(m = 10, scaleinvH0 = false), tolerance = 0.01, errordef = 0.5),
             true,
             :optim_minuit_lbfgs,
-            "Bounded LBFGS with descriptor finite-difference steps, descriptor-scaled preconditioning, and an EDM-style stopping proxy.",
+            "Bounded LBFGS with Optim finite differences, descriptor-scaled preconditioning, and an EDM-style stopping proxy.",
         ),
         MethodSpec(
             "Optim.Fminbox(BFGS(); Minuit metric)",
             () -> (tolerance = 0.01, errordef = 0.5),
             true,
             :optim_minuit_bfgs,
-            "Bounded full-memory BFGS with descriptor finite-difference steps, diagonal initial inverse Hessian, and an EDM callback.",
+            "Bounded full-memory BFGS with Optim finite differences, diagonal descriptor-scale initial inverse Hessian, and an EDM callback.",
         ),
         MethodSpec("Optim.Fminbox(BFGS())", () -> Fminbox(BFGS()), true, "Bounded full-memory BFGS baseline."),
         MethodSpec("Optim.NelderMead()", () -> NelderMead(), false, "Unbounded derivative-free baseline; expected to expose invalid-region behavior."),

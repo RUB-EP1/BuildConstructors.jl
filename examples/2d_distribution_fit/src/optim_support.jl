@@ -1,34 +1,3 @@
-function _finite_difference_gradient!(gradient, objective, problem, pars)
-    fx = objective(pars)
-    for i in eachindex(pars)
-        step = problem.step[i]
-        isfinite(step) && step > 0 || (step = 0.1)
-        lower = problem.lower[i]
-        upper = problem.upper[i]
-
-        plus = copy(pars)
-        minus = copy(pars)
-        if pars[i] - step >= lower && pars[i] + step <= upper
-            plus[i] = pars[i] + step
-            minus[i] = pars[i] - step
-            fp = objective(plus)
-            fm = objective(minus)
-            gradient[i] = (fp - fm) / (2step)
-        elseif pars[i] + step <= upper
-            plus[i] = pars[i] + step
-            fp = objective(plus)
-            gradient[i] = (fp - fx) / step
-        elseif pars[i] - step >= lower
-            minus[i] = pars[i] - step
-            fm = objective(minus)
-            gradient[i] = (fx - fm) / step
-        else
-            gradient[i] = 0.0
-        end
-    end
-    return gradient
-end
-
 _minuit_edm_goal(; tolerance, errordef) = max(2e-3 * tolerance * errordef, 4 * sqrt(eps()))
 
 function _descriptor_inverse_hessian(problem)

@@ -29,25 +29,6 @@ function _run_backend(
     return _optim_result(result)
 end
 
-function _run_backend(
-    ::Val{:optim_descriptor_steps},
-    method_spec,
-    objective,
-    problem,
-    constructor;
-    maxiters,
-    max_objective_calls,
-    max_seconds,
-)
-    method = method_spec.method_factory()
-    options = Optim.Options(iterations = maxiters)
-    gradient! = (gradient, pars) -> _finite_difference_gradient!(gradient, objective, problem, pars)
-    od = OnceDifferentiable(objective, gradient!, problem.start)
-    result = optimize(od, problem.lower, problem.upper, problem.start, method, options)
-    BuildConstructors.update!(constructor, Optim.minimizer(result))
-    return _optim_result(result)
-end
-
 function _minuit_like_optim_options(maxiters, max_objective_calls, max_seconds, callback)
     return Optim.Options(
         iterations = maxiters,
@@ -87,10 +68,8 @@ function _run_backend(
         max_seconds,
         _optim_diagonal_edm_callback(problem, last_edm, edm_goal),
     )
-    gradient! = (gradient, pars) -> _finite_difference_gradient!(gradient, objective, problem, pars)
-    od = OnceDifferentiable(objective, gradient!, problem.start)
     method = Fminbox(settings.method; precondprep = _descriptor_box_precondprep(problem))
-    result = optimize(od, problem.lower, problem.upper, problem.start, method, options)
+    result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
     BuildConstructors.update!(constructor, Optim.minimizer(result))
     return _optim_result(
         result;
@@ -119,9 +98,7 @@ function _run_backend(
         max_seconds,
         _optim_edm_callback(last_edm, edm_goal),
     )
-    gradient! = (gradient, pars) -> _finite_difference_gradient!(gradient, objective, problem, pars)
-    od = OnceDifferentiable(objective, gradient!, problem.start)
-    result = optimize(od, problem.lower, problem.upper, problem.start, method, options)
+    result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
     BuildConstructors.update!(constructor, Optim.minimizer(result))
     return _optim_result(
         result;

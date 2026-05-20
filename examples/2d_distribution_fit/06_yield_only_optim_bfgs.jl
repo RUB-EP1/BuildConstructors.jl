@@ -40,7 +40,6 @@ max_calls = env_int("FIT2D_MAX_CALLS", 500)
 iterations = env_int("FIT2D_MAXITERS", 100)
 objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 100_000)
 objective_calls = Ref(0)
-gradient_calls = Ref(0)
 last_edm = Ref(Inf)
 
 function counted_objective(pars)
@@ -51,14 +50,8 @@ function counted_objective(pars)
     return problem.objective(pars)
 end
 
-function counted_gradient!(gradient, pars)
-    gradient_calls[] += 1
-    return _finite_difference_gradient!(gradient, counted_objective, problem, pars)
-end
-
 edm_goal = _minuit_edm_goal(tolerance = tolerance, errordef = errordef)
 method = Fminbox(BFGS(initial_invH = _ -> _descriptor_inverse_hessian_matrix(problem)))
-objective = OnceDifferentiable(counted_objective, counted_gradient!, problem.start)
 options = Optim.Options(
     iterations = iterations,
     outer_iterations = iterations,
@@ -85,11 +78,11 @@ println("bounds: ", collect(zip(problem.lower, problem.upper)))
 println("descriptor steps: ", problem.step)
 println("initial inverse Hessian diagonal: ", diag(_descriptor_inverse_hessian(problem)))
 println("initial NLL: ", problem.base)
-println("gradient: descriptor-scale finite differences")
+println("gradient: Optim/NLSolversBase default central finite differences")
 println("iterations: ", iterations, ", max calls: ", max_calls)
 println("actual objective evaluation budget: ", objective_budget == 0 ? "none" : string(objective_budget))
 
-result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
+result = optimize(counted_objective, problem.lower, problem.upper, problem.start, method, options)
 BuildConstructors.update!(constructor, Optim.minimizer(result))
 
 best_nll = problem.base + Optim.minimum(result)
@@ -103,7 +96,6 @@ println("converged: ", Optim.converged(result))
 println("stopped by: ", result.stopped_by)
 println("EDM estimate: ", last_edm[])
 println("counted objective calls: ", objective_calls[])
-println("finite-difference gradient calls: ", gradient_calls[])
 println("Optim f calls: ", Optim.f_calls(result))
 println("Optim g calls: ", Optim.g_calls(result))
 println("iterations: ", Optim.iterations(result))
