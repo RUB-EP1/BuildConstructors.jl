@@ -1,60 +1,61 @@
 # # 2D Optim Derivatives
 #
-# This branch found an important derivative lesson. `AdvancedParameter`
-# uncertainty is a parameter scale for Minuit errors and Optim metrics. It is
-# not a finite-difference epsilon.
+# Derivative handling is one of the central findings of this branch.
 #
-# An early experiment reused the descriptor step as the finite-difference
-# perturbation. That made objective-call counts explode. The corrected benchmark
-# lets Optim/NLSolversBase choose its internal central finite-difference scale.
-# On the focused yield-only fit, that brought tuned Optim back to a modest call
-# count while keeping the same minimum.
+# `AdvancedParameter.uncertainty` is a parameter scale for Minuit errors and
+# Optim metrics. It is not a finite-difference perturbation. Reusing it as the
+# finite-difference epsilon made the number of NLL calls explode. Optim's
+# internal finite differences give a much fairer baseline.
 
 using ADTypes
+using LinearAlgebra
 using Optim
 import ReverseDiff
 
 include(joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit", "src", "two_dimensional_fit.jl"))
-include(joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit", "src", "minimizer_survey.jl"))
 using .TwoDimensionalFitExample
-using .Fit2DMinimizerSurvey
+
+descriptor_inverse_hessian(problem) = Diagonal(abs2.(collect(problem.step)))
+
+function run_bfgs_with_backend(problem; autodiff = nothing, maxiters = 25, max_calls = 500)
+    method = Fminbox(BFGS(initial_invH = _ -> descriptor_inverse_hessian(problem)))
+    options = Optim.Options(
+        iterations = maxiters,
+        outer_iterations = maxiters,
+        f_calls_limit = max_calls,
+        x_abstol = 0.0,
+        x_reltol = 0.0,
+        f_abstol = 0.0,
+        f_reltol = 0.0,
+        g_abstol = 0.0,
+    )
+
+    if autodiff === nothing
+        return optimize(problem.objective, problem.lower, problem.upper, problem.start, method, options)
+    end
+    return optimize(problem.objective, problem.lower, problem.upper, problem.start, method, options; autodiff)
+end
 
 loaded = load_fit_data()
-stage = StageSpec("yield_only", (:y_phiphi, :y_mixed, :y_kkkk), "Release only yields.")
+constructor = build_2d_constructor(length(loaded.data2d))
+fix!(constructor)
+release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
+problem = fitting_problem(constructor, loaded.data2d[1:250])
 
-finite_diff_bfgs = MethodSpec(
-    "Optim.Fminbox(BFGS(); Minuit metric)",
-    () -> (tolerance = 0.01, errordef = 0.5),
-    true,
-    :optim_minuit_bfgs,
-    "Optim internal finite differences.",
-)
+# With no `autodiff` keyword, Optim/NLSolversBase computes numerical gradients
+# using its internal finite-difference rules.
 
-reversediff_bfgs = MethodSpec(
-    "Optim.Fminbox(BFGS(); Minuit metric, ReverseDiff)",
-    () -> (tolerance = 0.01, errordef = 0.5, autodiff = AutoReverseDiff()),
-    true,
-    :optim_minuit_bfgs,
-    "ReverseDiff gradients through Optim.",
-)
+finite_diff_result = run_bfgs_with_backend(problem)
 
-results = run_survey(
-    loaded.data2d[1:250];
-    stages = [stage],
-    methods = [finite_diff_bfgs, reversediff_bfgs],
-    maxiters = 25,
-    max_objective_calls = 500,
-    max_seconds = 20.0,
-)
+# ReverseDiff is appropriate for one scalar NLL and many parameters. It reduces
+# counted objective calls because gradient evaluation no longer loops over
+# finite-difference probes. Importing `ReverseDiff` activates the needed
+# DifferentiationInterface extension.
 
-# ReverseDiff is useful for this NLL shape: one scalar objective and many
-# parameters. In the current scoreboard it preserves the minimum and sharply
-# reduces counted objective calls. Small samples can still be dominated by AD
-# tracing/preparation overhead, especially with LBFGS.
-#
-# ReverseDiff also exposed a genuine upstream compatibility issue:
-# `DistributionsHEP.CrystalBall` requires all constructor arguments to share one
-# concrete numeric type, while ReverseDiff often traces only released
-# parameters. The local workaround is isolated in
-# `examples/2d_distribution_fit/src/distributionshep_compat.jl`, and the issue
-# is documented upstream in JuliaHEP/DistributionsHEP.jl#45.
+reverse_diff_result = run_bfgs_with_backend(problem; autodiff = AutoReverseDiff())
+
+# ReverseDiff also exposed an upstream compatibility issue:
+# `DistributionsHEP.CrystalBall` requires all constructor arguments to have the
+# same concrete numeric type, while a staged fit may trace only released
+# parameters. The local compatibility file promotes mixed tracked/Float64
+# arguments before constructing the CrystalBall distribution.
