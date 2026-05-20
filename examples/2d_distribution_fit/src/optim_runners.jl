@@ -49,6 +49,13 @@ function _minuit_like_optim_options(maxiters, max_objective_calls, max_seconds, 
     )
 end
 
+function _optimize_with_optional_autodiff(objective, lower, upper, start, method, options, settings)
+    autodiff = get(settings, :autodiff, nothing)
+    autodiff === nothing &&
+        return optimize(objective, lower, upper, start, method, options)
+    return optimize(objective, lower, upper, start, method, options; autodiff)
+end
+
 function _run_backend(
     ::Val{:optim_minuit_lbfgs},
     method_spec,
@@ -69,7 +76,15 @@ function _run_backend(
         _optim_diagonal_edm_callback(problem, last_edm, edm_goal),
     )
     method = Fminbox(settings.method; precondprep = _descriptor_box_precondprep(problem))
-    result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
+    result = _optimize_with_optional_autodiff(
+        objective,
+        problem.lower,
+        problem.upper,
+        problem.start,
+        method,
+        options,
+        settings,
+    )
     BuildConstructors.update!(constructor, Optim.minimizer(result))
     return _optim_result(
         result;
@@ -98,7 +113,15 @@ function _run_backend(
         max_seconds,
         _optim_edm_callback(last_edm, edm_goal),
     )
-    result = optimize(objective, problem.lower, problem.upper, problem.start, method, options)
+    result = _optimize_with_optional_autodiff(
+        objective,
+        problem.lower,
+        problem.upper,
+        problem.start,
+        method,
+        options,
+        settings,
+    )
     BuildConstructors.update!(constructor, Optim.minimizer(result))
     return _optim_result(
         result;

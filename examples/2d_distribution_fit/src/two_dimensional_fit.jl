@@ -34,11 +34,7 @@ const KK_LIMITS = (MASS_MIN_GEV, MASS_MAX_GEV)
 
 data_path() = normpath(joinpath(@__DIR__, "..", "data", "fit_events.arrow"))
 
-# DistributionsHEP's CrystalBall currently provides `pdf` but not `logpdf`.
-function logpdf(d::CrystalBall{T}, x::Real) where {T<:Real}
-    p = pdf(d, x)
-    return p <= 0 ? -Inf : log(p)
-end
+include("distributionshep_compat.jl")
 
 function load_fit_data(path::AbstractString = data_path())
     isfile(path) || error("Missing Arrow table: $path")
@@ -63,7 +59,7 @@ end
 @with_parameters(Fit2DTruncatedCrystalBall,
     mu::P, sigma::P, alpha::P, n::P,
     support::Tuple{Float64,Float64}, begin
-        truncated(CrystalBall(mu, sigma, alpha, n), support...)
+        truncated(_crystalball(mu, sigma, alpha, n), support...)
     end)
 
 @with_parameters(Fit2DTruncatedExponential,

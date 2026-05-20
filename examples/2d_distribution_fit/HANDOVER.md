@@ -116,6 +116,16 @@ generic `Optimization.jl` wrapper. This is deliberate:
   another Migrad pass. The winning row converged immediately enough that this
   retry machinery was not the main story.
 
+## Upstream DistributionsHEP compatibility
+
+The local `src/distributionshep_compat.jl` file isolates compatibility shims
+that should move upstream. The CrystalBall constructor requires all parameters
+to have the same concrete numeric type, which breaks ReverseDiff when only a
+subset of parameters is traced and fixed parameters remain `Float64`. The local
+workaround promotes all four constructor arguments before calling
+`CrystalBall`. This is documented in JuliaHEP/DistributionsHEP.jl#45 with a
+minimal ReverseDiff reproducer.
+
 ## Optim configuration notes
 
 The Optim comparison should be made as close as possible to the Minuit reference
@@ -128,9 +138,19 @@ Optim rows:
   a custom `precondprep` that combines the box-barrier Hessian with
   `1 / step^2`. Derivatives are Optim/NLSolversBase default central finite
   differences, not descriptor-scale finite differences.
+- `Optim.Fminbox(LBFGS(); Minuit metric, ReverseDiff)` is the same metric setup
+  but requests `ADTypes.AutoReverseDiff()` through Optim. `ReverseDiff` must be
+  imported so DifferentiationInterface activates the extension.
 - `Optim.Fminbox(BFGS(); Minuit metric)` uses Optim/NLSolversBase default
   central finite differences, a dense diagonal initial inverse Hessian with
   entries `step^2`, and an EDM-style callback.
+- `Optim.Fminbox(BFGS(); Minuit metric, ReverseDiff)` is the same BFGS setup
+  with ReverseDiff gradients.
+- On the 250-event survey, ReverseDiff preserves the same minima for the tuned
+  Optim rows while sharply reducing counted objective calls: yield-only drops
+  from `57` calls to `8`, shape-only BFGS from `113` to `16`, and all-free BFGS
+  from `391` to `25`. For small samples, wall time can still be dominated by AD
+  preparation and tracing overhead, especially in `LBFGS`.
 - The focused yield-only Optim scripts use the same fair numerical-derivative
   path. An analytic yield-only gradient is possible for this reduced problem,
   but it is not representative of the all-parameter fit and should be treated as

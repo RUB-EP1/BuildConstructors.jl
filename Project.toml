@@ -16,6 +16,7 @@ NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
 PhysicsModelsExt = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistributions"]
 
 [compat]
+ADTypes = ">=1.22"
 ComponentArrays = ">=0.15"
 Arrow = ">=2.8"
 DataFrames = ">=1.8"
@@ -29,10 +30,12 @@ NumericalDistributions = ">=0.5.3"
 Optim = ">=2"
 OrderedCollections = "1.8.1"
 Printf = ">=1"
+ReverseDiff = ">=1.16"
 julia = "1.9"
 Test = ">=1"
 
 [extras]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -45,11 +48,13 @@ Minuit2 = "37821647-3276-4ed8-9a4e-bc9886b3c106"
 NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = [
     "Test",
+    "ADTypes",
     "Arrow",
     "ComponentArrays",
     "DataFrames",
@@ -62,4 +67,5 @@ test = [
     "NumericalDistributions",
     "Optim",
     "Printf",
+    "ReverseDiff",
 ]

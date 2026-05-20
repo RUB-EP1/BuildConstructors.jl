@@ -1,4 +1,5 @@
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 BuildConstructors = "63b9b590-f22f-4e79-810f-ea9ba6849c26"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
@@ -11,6 +12,7 @@ Minuit2 = "37821647-3276-4ed8-9a4e-bc9886b3c106"
 NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 
 [sources]
 BuildConstructors = {path = "../.."}

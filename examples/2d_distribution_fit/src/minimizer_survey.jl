@@ -1,10 +1,12 @@
 module Fit2DMinimizerSurvey
 
 using BuildConstructors
+using ADTypes
 using Dates
 using LinearAlgebra
 using Optim
 using Printf
+import ReverseDiff
 
 using ..TwoDimensionalFitExample
 
