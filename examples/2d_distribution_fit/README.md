@@ -47,6 +47,8 @@ The known failure modes are:
 - `src/minimizer_survey.jl`: tiny module entry point for the survey tools.
 - `src/survey_core.jl`: shared budget, stage, scoreboard, and CSV/Markdown
   mechanics.
+- `src/distributionshep_compat.jl`: local DistributionsHEP compatibility shims
+  being tracked upstream in JuliaHEP/DistributionsHEP.jl#45.
 - `src/optim_support.jl`: shared Optim preconditioners and EDM-style
   callbacks.
 - `src/optim_runners.jl`: Optim-specific runners and tuned Optim settings.
@@ -64,11 +66,12 @@ The known failure modes are:
   `Minuit2.Migrad(strategy=1)`, explicit limits, and descriptor step sizes.
 - `06_yield_only_optim_bfgs.jl`: the same yield-only fit with
   `Optim.Fminbox(BFGS())`, Optim/NLSolversBase finite differences,
-  descriptor-scale initial inverse Hessian, and an EDM-style callback.
+  descriptor-scale initial inverse Hessian, and an EDM-style callback. Set
+  `FIT2D_AUTODIFF=reversediff` to use ReverseDiff gradients.
 - `07_yield_only_optim_lbfgs.jl`: the same yield-only fit with
   `Optim.Fminbox(LBFGS())`, Optim/NLSolversBase finite differences,
   descriptor-scale diagonal preconditioner, and the same budgeted stopping
-  style.
+  style. Set `FIT2D_AUTODIFF=reversediff` to use ReverseDiff gradients.
 - `HANDOVER.md`: research notes, current observations, and follow-up plan.
 
 ## Running
@@ -98,4 +101,5 @@ Run the focused yield-only comparison:
 FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/05_yield_only_minuit.jl
 FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/06_yield_only_optim_bfgs.jl
 FIT2D_SAMPLE_SIZE=250 julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/07_yield_only_optim_lbfgs.jl
+FIT2D_SAMPLE_SIZE=250 FIT2D_AUTODIFF=reversediff julia --project=examples/2d_distribution_fit examples/2d_distribution_fit/06_yield_only_optim_bfgs.jl
 ```

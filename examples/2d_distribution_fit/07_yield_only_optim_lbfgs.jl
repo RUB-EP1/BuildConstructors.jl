@@ -6,10 +6,12 @@ Pkg.activate(SCRIPT_DIR)
 include(joinpath(SCRIPT_DIR, "src", "two_dimensional_fit.jl"))
 include(joinpath(SCRIPT_DIR, "src", "optim_support.jl"))
 
+using ADTypes
 using BuildConstructors
 using LinearAlgebra
 using Optim
 using Printf
+import ReverseDiff
 using .TwoDimensionalFitExample
 
 function env_int(name, default)
@@ -18,6 +20,13 @@ end
 
 function env_float(name, default)
     return parse(Float64, get(ENV, name, string(default)))
+end
+
+function autodiff_setting()
+    name = lowercase(get(ENV, "FIT2D_AUTODIFF", "finite"))
+    name in ("finite", "finitediff", "central") && return (; name = "Optim/NLSolversBase central finite differences", autodiff = nothing)
+    name in ("reverse", "reversediff") && return (; name = "ReverseDiff via ADTypes", autodiff = AutoReverseDiff())
+    error("unknown FIT2D_AUTODIFF=$(name); expected finite or reversediff")
 end
 
 function selected_data()
@@ -40,6 +49,7 @@ max_calls = env_int("FIT2D_MAX_CALLS", 500)
 iterations = env_int("FIT2D_MAXITERS", 100)
 memory = env_int("FIT2D_LBFGS_MEMORY", 10)
 objective_budget = env_int("FIT2D_OBJECTIVE_CALL_BUDGET", 100_000)
+ad = autodiff_setting()
 objective_calls = Ref(0)
 last_edm = Ref(Inf)
 
@@ -80,11 +90,15 @@ println("bounds: ", collect(zip(problem.lower, problem.upper)))
 println("descriptor steps: ", problem.step)
 println("preconditioner starts from step^2 diagonal through Fminbox barrier")
 println("initial NLL: ", problem.base)
-println("gradient: Optim/NLSolversBase default central finite differences")
+println("gradient: ", ad.name)
 println("memory: ", memory, ", iterations: ", iterations, ", max calls: ", max_calls)
 println("actual objective evaluation budget: ", objective_budget == 0 ? "none" : string(objective_budget))
 
-result = optimize(counted_objective, problem.lower, problem.upper, problem.start, method, options)
+result = if ad.autodiff === nothing
+    optimize(counted_objective, problem.lower, problem.upper, problem.start, method, options)
+else
+    optimize(counted_objective, problem.lower, problem.upper, problem.start, method, options; autodiff = ad.autodiff)
+end
 BuildConstructors.update!(constructor, Optim.minimizer(result))
 
 best_nll = problem.base + Optim.minimum(result)

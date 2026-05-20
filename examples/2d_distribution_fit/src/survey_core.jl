@@ -55,7 +55,7 @@ function _budgeted_objective(objective; max_objective_calls, max_seconds)
         time() - started > max_seconds &&
             throw(BudgetExceeded("wall-time budget exceeded"))
         value = objective(pars)
-        if isfinite(value) && value < best_value[]
+        if value isa AbstractFloat && isfinite(value) && value < best_value[]
             best_value[] = value
             best_pars[] = deepcopy(pars)
         end
