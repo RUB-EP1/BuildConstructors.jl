@@ -121,6 +121,8 @@ release!(c, (:σ,))
 update!(c, (σ = 0.25,))
 ```
 
+When names are duplicated, metadata preserves every entry, while projected collectors keep one key and use the last value.
+
 You can define your own parameter descriptor by subtyping
 `BuildConstructors.AbstractParameter` and implementing `BuildConstructors.value`.
 Implement the other methods only if your descriptor needs to participate in fixing,

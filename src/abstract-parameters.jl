@@ -114,28 +114,33 @@ end
 function _metadata_names(metadata, state::Symbol)
     names = Symbol[]
     for entry in _metadata_entries(metadata)
-        include_entry =
-            state === :all ||
-            (state === :running && !entry.fixed) ||
-            (state === :fixed && entry.fixed)
-        include_entry || continue
+        _include_metadata_entry(entry, state) || continue
         entry.name in names || push!(names, entry.name)
     end
     return Tuple(names)
 end
 
+_include_metadata_entry(entry, state::Symbol) =
+    state === :all ||
+    (state === :running && !entry.fixed) ||
+    (state === :fixed && entry.fixed)
+
 function _metadata_namedtuple(metadata, field::Symbol, state::Symbol)
-    entries = _metadata_entries(metadata)
-    return foldl(entries; init = NamedTuple()) do acc, entry
-        include_entry =
-            state === :all ||
-            (state === :running && !entry.fixed) ||
-            (state === :fixed && entry.fixed)
-        if include_entry
-            return merge(acc, NamedTuple{(entry.name,)}((getproperty(entry, field),)))
+    names = Symbol[]
+    values = Any[]
+    for entry in _metadata_entries(metadata)
+        _include_metadata_entry(entry, state) || continue
+
+        name_index = findfirst(==(entry.name), names)
+        value = getproperty(entry, field)
+        if isnothing(name_index)
+            push!(names, entry.name)
+            push!(values, value)
+        else
+            values[name_index] = value
         end
-        return acc
     end
+    return NamedTuple{Tuple(names)}(Tuple(values))
 end
 
 """
