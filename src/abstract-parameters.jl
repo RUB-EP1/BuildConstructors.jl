@@ -102,7 +102,7 @@ const _PARAMETER_METADATA_KEYS = (
 )
 
 _is_parameter_metadata_entry(entry) =
-    entry isa NamedTuple && all(key -> key in keys(entry), _PARAMETER_METADATA_KEYS)
+    entry isa NamedTuple && keys(entry) == _PARAMETER_METADATA_KEYS
 
 _is_parameter_metadata(metadata::Tuple) = all(_is_parameter_metadata_entry, metadata)
 
