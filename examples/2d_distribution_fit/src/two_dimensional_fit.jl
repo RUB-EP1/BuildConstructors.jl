@@ -19,7 +19,6 @@ export data_path
 export extended_negative_log_likelihood
 export fit!
 export fitting_problem
-export free_parameter_names
 export load_fit_data
 export total_yield
 
@@ -123,42 +122,20 @@ function extended_negative_log_likelihood(constructor::BuildConstructors.Abstrac
     end
 end
 
-function _append_free_parameter_names!(names::Vector{Symbol}, p::BuildConstructors.AbstractParameter)
-    isempty(running_values(p)) && return names
-    fixed = hasfield(typeof(p), :fixed) ? getfield(p, :fixed) : false
-    fixed || append!(names, keys(running_values(p)))
-    return names
-end
-
-function _append_free_parameter_names!(names::Vector{Symbol}, c::BuildConstructors.AbstractConstructor)
-    for field in fieldnames(typeof(c))
-        _append_free_parameter_names!(names, getfield(c, field))
-    end
-    return names
-end
-
-_append_free_parameter_names!(names::Vector{Symbol}, _) = names
-
-function free_parameter_names(constructor::BuildConstructors.AbstractConstructor)
-    names = Symbol[]
-    _append_free_parameter_names!(names, constructor)
-    return Tuple(unique(names))
-end
-
 function _select_parameters(values, names::Tuple)
     return NamedTuple{names}(map(name -> getproperty(values, name), names))
 end
 
 function fitting_problem(constructor, data)
-    names = free_parameter_names(constructor)
+    names = running_names(constructor)
     isempty(names) && error("No released parameters to fit")
 
-    start = ComponentArray(_select_parameters(running_values(constructor), names))
-    lower = ComponentArray(_select_parameters(running_lower_boundaries(constructor), names))
-    upper = ComponentArray(_select_parameters(running_upper_boundaries(constructor), names))
+    start = ComponentArray(_select_parameters(parameter_values(constructor), names))
+    lower = ComponentArray(_select_parameters(parameter_lower_boundaries(constructor), names))
+    upper = ComponentArray(_select_parameters(parameter_upper_boundaries(constructor), names))
     step = ComponentArray(
         _select_parameters(
-            map(value -> ismissing(value) ? 0.1 : value, running_uncertainties(constructor)),
+            map(value -> ismissing(value) ? 0.1 : value, parameter_uncertainties(constructor)),
             names,
         ),
     )

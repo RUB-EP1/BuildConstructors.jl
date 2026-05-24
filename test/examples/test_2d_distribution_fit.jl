@@ -24,12 +24,12 @@ using .Fit2DMinimizerSurvey
     @test all(x -> KK_LIMITS[1] < x[2] < KK_LIMITS[2], loaded.data2d)
 
     constructor = build_2d_constructor(size(loaded.fit_df, 1))
-    pars = ComponentArray(running_values(constructor))
+    pars = ComponentArray(parameter_values(constructor))
     @test Set(keys(pars)) ==
           Set((:y_phiphi, :y_mixed, :y_kkkk, :mu_B, :sigma_B, :alpha_B, :k_bkg_kk))
 
-    lower = ComponentArray(running_lower_boundaries(constructor))
-    upper = ComponentArray(running_upper_boundaries(constructor))
+    lower = ComponentArray(parameter_lower_boundaries(constructor))
+    upper = ComponentArray(parameter_upper_boundaries(constructor))
     @test all(lower .<= pars .<= upper)
     @test lower.y_phiphi == 0.0
     @test lower.y_mixed == 0.0
@@ -41,7 +41,7 @@ using .Fit2DMinimizerSurvey
 
     fix!(constructor)
     release!(constructor, (:y_phiphi, :y_mixed, :y_kkkk))
-    @test free_parameter_names(constructor) == (:y_phiphi, :y_mixed, :y_kkkk)
+    @test running_names(constructor) == (:y_phiphi, :y_mixed, :y_kkkk)
     result = fit!(
         constructor,
         loaded.data2d[1:25];

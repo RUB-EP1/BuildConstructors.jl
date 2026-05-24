@@ -37,10 +37,10 @@ to formulate and solve similar optimization problems.
 - The initial extended NLL is about `-154595.0446`.
 - The staged `Fminbox(LBFGS())` baseline works when the optimizer vector only
   contains released parameters.
-- A key bug/lesson from the first pass: `running_values(constructor)` includes
-  fixed descriptors. A fit wrapper must explicitly select currently released
-  parameters, otherwise inactive trial coordinates can move and then be written
-  back by `update!`.
+- A key bug/lesson from the first pass: `parameter_values(constructor)` includes
+  fixed descriptors. A fit wrapper must explicitly select `running_names`
+  before constructing the optimizer vector, otherwise inactive trial coordinates
+  can move and then be written back by `update!`.
 - Invalid physical regions are real, not edge cases. Negative yields or invalid
   shape parameters can make model construction fail. The benchmark objective
   converts expected `ArgumentError`s into `Inf`, so minimizers can be compared

@@ -14,7 +14,7 @@ using .TwoDimensionalFitExample
 loaded = load_fit_data()
 constructor = build_2d_constructor(size(loaded.fit_df, 1))
 
-start = ComponentArray(running_values(constructor))
+start = ComponentArray(parameter_values(constructor))
 initial_model = build_model(constructor, start)
 initial_nll = extended_negative_log_likelihood(initial_model, loaded.data2d)
 

@@ -34,10 +34,10 @@ using .TwoDimensionalFitExample
 loaded = load_fit_data()
 constructor = build_2d_constructor(length(loaded.data2d))
 
-start = ComponentArray(running_values(constructor))
-lower = ComponentArray(running_lower_boundaries(constructor))
-upper = ComponentArray(running_upper_boundaries(constructor))
-step = ComponentArray(running_uncertainties(constructor))
+start = ComponentArray(parameter_values(constructor))
+lower = ComponentArray(parameter_lower_boundaries(constructor))
+upper = ComponentArray(parameter_upper_boundaries(constructor))
+step = ComponentArray(parameter_uncertainties(constructor))
 
 # The fit problem packages the constructor state into a compact optimizer-facing
 # object. The `objective` receives a `ComponentArray` containing only the
