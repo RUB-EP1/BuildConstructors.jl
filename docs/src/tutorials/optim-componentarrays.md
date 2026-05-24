@@ -49,9 +49,9 @@ data = rand(truth, 2_000)
 Convert the constructor metadata to `ComponentArray`s:
 
 ```julia
-start = ComponentArray(running_values(constructor))
-lower = ComponentArray(running_lower_boundaries(constructor))
-upper = ComponentArray(running_upper_boundaries(constructor))
+start = ComponentArray(parameter_values(constructor))
+lower = ComponentArray(parameter_lower_boundaries(constructor))
+upper = ComponentArray(parameter_upper_boundaries(constructor))
 ```
 
 The negative log-likelihood can pass the `ComponentArray` directly into
@@ -89,7 +89,7 @@ fitted.σ_left
 fitted.f_left
 
 update!(constructor, fitted)
-running_values(constructor)
+parameter_values(constructor)
 ```
 
 This avoids the usual back-and-forth conversion between a flat vector and a

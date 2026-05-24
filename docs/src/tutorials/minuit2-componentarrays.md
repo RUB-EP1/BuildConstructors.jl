@@ -47,12 +47,12 @@ data = rand(truth, 2_000)
 Prepare the starting point and metadata:
 
 ```julia
-start = ComponentArray(running_values(constructor))
-lower = ComponentArray(running_lower_boundaries(constructor))
-upper = ComponentArray(running_upper_boundaries(constructor))
+start = ComponentArray(parameter_values(constructor))
+lower = ComponentArray(parameter_lower_boundaries(constructor))
+upper = ComponentArray(parameter_upper_boundaries(constructor))
 
 errors = ComponentArray(
-    map(v -> coalesce(v, 0.1), running_uncertainties(constructor)),
+    map(v -> coalesce(v, 0.1), parameter_uncertainties(constructor)),
 )
 limits = collect(zip(lower, upper))
 ```
@@ -99,7 +99,7 @@ fitted.σ_left
 fitted.f_left
 
 update!(constructor, fitted)
-running_values(constructor)
+parameter_values(constructor)
 ```
 
 The important part is that the objective function itself can remain written in

@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.6.0
+
+### Added
+
+- Parameter metadata collectors: `parameter_values`, `parameter_uncertainties`, `parameter_lower_boundaries`, and `parameter_upper_boundaries`.
+- Parameter state name collectors: `parameter_names`, `running_names`, and `fixed_names`.
+- Filtered state metadata collectors: `running_values`, `running_uncertainties`, `running_lower_boundaries`, `running_upper_boundaries`, `fixed_values`, `fixed_uncertainties`, `fixed_lower_boundaries`, and `fixed_upper_boundaries`.
+
 ## 0.5.0
 
 ### Changed
