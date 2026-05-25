@@ -85,24 +85,24 @@ function generate_type_parameters(n_params, n_parametric_fields)
     return param_type_params, parametric_type_params
 end
 
-# Multiple dispatch: Add struct field definition based on field type
-# Mutates struct_fields
-function add_struct_field!(struct_fields, field::ParametricField, parametric_idx)
+# Multiple dispatch: Add struct field definition based on field type.
+# Takes both index counters; each method returns the updated pair.
+function add_struct_field!(struct_fields, field::ParametricField, param_idx, parametric_idx)
     type_param = Symbol("P", parametric_idx)
     push!(struct_fields.args, Expr(:(::), field.name, type_param))
-    return parametric_idx + 1
+    return param_idx, parametric_idx + 1
 end
 
-function add_struct_field!(struct_fields, field::DescriptorField, param_idx)
+function add_struct_field!(struct_fields, field::DescriptorField, param_idx, parametric_idx)
     type_param = Symbol("T", param_idx)
     field_name = Symbol("description_of_", field.name)
     push!(struct_fields.args, Expr(:(::), field_name, type_param))
-    return param_idx + 1
+    return param_idx + 1, parametric_idx
 end
 
-function add_struct_field!(struct_fields, field::ConstantField, _)
+function add_struct_field!(struct_fields, field::ConstantField, param_idx, parametric_idx)
     push!(struct_fields.args, Expr(:(::), field.name, field.type_expr))
-    return nothing  # unused index slot for ConstantField
+    return param_idx, parametric_idx
 end
 
 # Helper: Generate struct fields in macro header declaration order
@@ -113,13 +113,8 @@ function generate_struct_fields(ordered_fields)
     parametric_idx = 1
 
     for field in ordered_fields
-        if field isa ParametricField
-            parametric_idx = add_struct_field!(struct_fields, field, parametric_idx)
-        elseif field isa DescriptorField
-            param_idx = add_struct_field!(struct_fields, field, param_idx)
-        elseif field isa ConstantField
-            add_struct_field!(struct_fields, field, nothing)
-        end
+        param_idx, parametric_idx =
+            add_struct_field!(struct_fields, field, param_idx, parametric_idx)
     end
 
     return struct_fields
