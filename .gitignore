@@ -1,3 +1,4 @@
 Manifest.toml
 docs/build/
 docs/src/tutorials/2d-model-construction.md
+examples/2d_distribution_fit/data/fit_events_full.arrow
