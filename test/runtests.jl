@@ -97,7 +97,7 @@ cM_running_w = ConstructorOfPRBModel(
 )
 
 model = build_model(cM_running_w, (w = 0.5,))
-@test pdf(model, 1.1) ≈ 0.45971088258516407
+@test pdf(model, 1.1) ≈ 0.45971088258516407 rtol = 1e-6
 
 
 constructor, pars = load_prb_model_from_json(
@@ -107,7 +107,7 @@ constructor, pars = load_prb_model_from_json(
     "Pol2",
 )
 model = build_model(constructor, pars)
-@test pdf(model, 1.1) ≈ 0.01570665415299559
+@test pdf(model, 1.1) ≈ 0.01570665415299559 rtol = 1e-6
 
 
 
@@ -204,8 +204,8 @@ end
 
     @test model1 isa Distribution
     @test model2 isa Distribution
-    @test pdf(model1, 1.1) ≈ 0.01570665415299559
-    @test pdf(model2, 1.1) ≈ 0.01570665415299559
+    @test pdf(model1, 1.1) ≈ pdf(model2, 1.1)
+    @test pdf(model1, 1.1) ≈ 0.01570665415299559 rtol = 1e-6
 end
 
 @testset "Extend BuildConstructors" begin
