@@ -12,10 +12,10 @@
 
 using Arrow
 using BuildConstructors
-using CairoMakie
 using DataFrames
 using Distributions
 using DistributionsHEP
+using Plots
 
 example_dir = joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit")
 model_source = joinpath(example_dir, "src", "two_dimensional_model.jl")
@@ -109,36 +109,80 @@ extended_negative_log_likelihood(full_model_constructor, pars, data2d)
 # and the two one-dimensional projections below are diagnostic views of the
 # starting model, not fitted results.
 
-mass_grid = range(KK_LIMITS[1], KK_LIMITS[2]; length = 160)
+gr()
+
+mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length = 160))
 density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
 
-fig = Figure(size = (900, 760))
-ax = Axis(
-    fig[1, 1],
-    xlabel = "m(K^{+}K^{-})_{1} [GeV]",
-    ylabel = "m(K^{+}K^{-})_{2} [GeV]",
-    title = "Starting 2D extended model",
-)
-hm = heatmap!(ax, mass_grid, mass_grid, density_grid)
-scatter!(ax, fit_df.mKK1, fit_df.mKK2; markersize = 2, color = (:white, 0.35))
-Colorbar(fig[1, 2], hm, label = "extended density")
-
-step = (last(mass_grid) - first(mass_grid)) / (length(mass_grid) - 1)
 marginal_1 = DistributionsHEP.marginalize(model, 1)
 marginal_2 = DistributionsHEP.marginalize(model, 2)
 projection_1 = marginal_1.(mass_grid)
 projection_2 = marginal_2.(mass_grid)
 
-ax1 = Axis(fig[2, 1], xlabel = "m(K^{+}K^{-})_{1} [GeV]", ylabel = "events / bin")
-hist!(ax1, fit_df.mKK1; bins = 60, color = (:steelblue, 0.35), strokewidth = 0)
-lines!(ax1, mass_grid, projection_1 .* (KK_LIMITS[2] - KK_LIMITS[1]) / 60; color = :black, linewidth = 2)
+bin_scale = (KK_LIMITS[2] - KK_LIMITS[1]) / 60
 
-ax2 = Axis(fig[3, 1], xlabel = "m(K^{+}K^{-})_{2} [GeV]", ylabel = "events / bin")
-hist!(ax2, fit_df.mKK2; bins = 60, color = (:darkorange, 0.35), strokewidth = 0)
-lines!(ax2, mass_grid, projection_2 .* (KK_LIMITS[2] - KK_LIMITS[1]) / 60; color = :black, linewidth = 2)
+p_heatmap = heatmap(
+    mass_grid,
+    mass_grid,
+    density_grid;
+    xlabel = "m(K⁺K⁻)₁ [GeV]",
+    ylabel = "m(K⁺K⁻)₂ [GeV]",
+    title = "Starting 2D extended model",
+    colorbar_title = "extended density",
+)
+scatter!(
+    p_heatmap,
+    fit_df.mKK1,
+    fit_df.mKK2;
+    markercolor = :white,
+    markeralpha = 0.35,
+    markersize = 1,
+    label = "",
+)
 
-assets_dir = joinpath(@__DIR__, "..", "..", "src", "assets")
-mkpath(assets_dir)
-save(joinpath(assets_dir, "2d-model-construction-start.png"), fig)
+p_m1 = histogram(
+    fit_df.mKK1;
+    bins = 60,
+    label = "",
+    fillcolor = :steelblue,
+    fillalpha = 0.35,
+    linecolor = nothing,
+    xlabel = "m(K⁺K⁻)₁ [GeV]",
+    ylabel = "events / bin",
+)
+plot!(
+    p_m1,
+    mass_grid,
+    projection_1 .* bin_scale;
+    linewidth = 2,
+    color = :black,
+    label = "",
+)
 
-# ![Starting 2D extended model and projections](../assets/2d-model-construction-start.png)
+p_m2 = histogram(
+    fit_df.mKK2;
+    bins = 60,
+    label = "",
+    fillcolor = :darkorange,
+    fillalpha = 0.35,
+    linecolor = nothing,
+    xlabel = "m(K⁺K⁻)₂ [GeV]",
+    ylabel = "events / bin",
+)
+plot!(
+    p_m2,
+    mass_grid,
+    projection_2 .* bin_scale;
+    linewidth = 2,
+    color = :black,
+    label = "",
+)
+
+plot(
+    p_heatmap,
+    p_m1,
+    p_m2;
+    layout = (3, 1),
+    size = (900, 760),
+    link = :none,
+)

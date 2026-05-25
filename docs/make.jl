@@ -36,6 +36,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
             prettyurls=get(ENV, "CI", "false") == "true",
             canonical="https://RUB-EP1.github.io/BuildConstructors.jl",
             repolink=GITHUB_REPO,
+            size_threshold = nothing,
         ),
         pages=[
             "Home" => "index.md",
