@@ -9,6 +9,140 @@
 # constants, and a thin wrapper around `DistributionsHEP.extended_negative_log_likelihood`.
 # `ExtendedMixtureModel`, `marginalize`, and the extended NLL live in
 # `DistributionsHEP.jl` (pinned to branch `codex/extended-mixture-model`).
+#
+# ## How `two_dimensional_model.jl` defines the model
+#
+# The model shapes are declared once in
+# `examples/2d_distribution_fit/src/two_dimensional_model.jl` with
+# [`@with_parameters`](@ref). Each macro block generates two things:
+#
+# - a `ConstructorOf…` struct that stores parameter descriptors and nested
+#   constructors, and
+# - a matching `build_model(::ConstructorOf…, pars)` method whose body turns
+#   those descriptors into an ordinary `Distributions.jl` object.
+#
+# Inside a `@with_parameters` body, fields fall into three roles:
+#
+# - `field::P` — fit parameter. The macro resolves it to a numeric value from
+#   `pars` and exposes it as a local named `field`.
+# - `field::SomeType` — fixed configuration stored on the constructor (for
+#   example a fit window or a fixed tail index).
+# - `field` without `::P` — nested constructor. Pass the same `pars` through
+#   when calling `build_model(field, pars)`.
+#
+# The constructor positional arguments follow the same order as the field list in
+# the macro header.
+#
+# ### Constants and fit windows
+#
+# The source file fixes the φ-region K⁺K⁻ mass window in GeV:
+#
+# ```julia
+# const KK_LIMITS = (1.002, 1.038)
+# const PHI_MASS_GEV = 1.019461
+# ```
+#
+# The tutorial reuses `KK_LIMITS` when loading data and when building
+# constructors.
+#
+# ### One-dimensional signal: `Fit2DTruncatedCrystalBall`
+#
+# The signal component is a truncated `CrystalBall` on the KK mass axis:
+#
+# ```julia
+# @with_parameters(Fit2DTruncatedCrystalBall,
+#     mu::P, sigma::P, alpha::P, n::P,
+#     support::Tuple{Float64,Float64}, begin
+#         truncated(CrystalBall(mu, sigma, alpha, n), support...)
+#     end)
+# ```
+#
+# `mu`, `sigma`, `alpha`, and `n` become fit parameters. `support` is fixed to
+# `KK_LIMITS` when the constructor is built below. `n` is wrapped in
+# `BuildConstructors.Fixed` in the tutorial so the tail index stays constant for
+# this example.
+#
+# ### One-dimensional background: `Fit2DTruncatedExponential`
+#
+# The background is a truncated exponential, oriented according to the sign of
+# `k`:
+#
+# ```julia
+# @with_parameters(Fit2DTruncatedExponential,
+#     k::P,
+#     support::Tuple{Float64,Float64}, begin
+#         s = sign(k)
+#         shift = s > 0 ? support[1] : support[2]
+#         truncated(shift + s * Exponential(s * k), support...)
+#     end)
+# ```
+#
+# Only the decay rate `k` is free; the support window is again supplied as
+# `KK_LIMITS` at construction time.
+#
+# ### Extended two-dimensional assembly: `Fit2DExtendedKKComponents`
+#
+# The top-level constructor combines three **yield components** for the two KK
+# invariant masses `(m₁, m₂)`:
+#
+# | Component | Physics picture | 2D shape |
+# |:--|:--|:--|
+# | `phiphi` | signal on both axes | `signal × signal` |
+# | `mixed` | signal on one axis, background on the other | equal mix of `signal × background` and `background × signal` |
+# | `kkkk` | background on both axes | `background × background` |
+#
+# The macro body builds the 1D shapes, forms 2D products with
+# `product_distribution`, and wraps the result in `ExtendedMixtureModel`:
+#
+# ```julia
+# @with_parameters(Fit2DExtendedKKComponents,
+#     y_phiphi::P, y_mixed::P, y_kkkk::P,
+#     signal_kk,
+#     background_kk,
+#     begin
+#         signal = build_model(signal_kk, pars)
+#         background = build_model(background_kk, pars)
+#
+#         phiphi = product_distribution([signal, signal])
+#         mixed = MixtureModel(
+#             [
+#                 product_distribution([signal, background]),
+#                 product_distribution([background, signal]),
+#             ],
+#             [0.5, 0.5],
+#         )
+#         kkkk = product_distribution([background, background])
+#
+#         return ExtendedMixtureModel([phiphi, mixed, kkkk], [y_phiphi, y_mixed, y_kkkk])
+#     end)
+# ```
+#
+# The three `y_*` fields are extended yields: the model predicts absolute event
+# counts, not just a normalized PDF. Because the macro lists the yields before
+# the nested constructors, the generated constructor is called as
+# `ConstructorOfFit2DExtendedKKComponents(y_phiphi, y_mixed, y_kkkk, signal_kk, background_kk)`.
+#
+# ### Negative log-likelihood wrapper
+#
+# The source file adds a convenience method so callers can pass the constructor
+# tree directly:
+#
+# ```julia
+# function extended_negative_log_likelihood(constructor::AbstractConstructor, pars, data)
+#     try
+#         return extended_negative_log_likelihood(build_model(constructor, pars), data)
+#     catch err
+#         err isa ArgumentError && return Inf
+#         rethrow()
+#     end
+# end
+# ```
+#
+# If `build_model` rejects the trial parameters, the wrapper returns `Inf`
+# instead of aborting the surrounding minimizer logic.
+#
+# The next cell loads that file and registers the generated constructor types in
+# the tutorial session.
 
 using Arrow
 using BuildConstructors
@@ -48,9 +182,11 @@ n_events = length(data2d)
 
 # ## Build the one-dimensional components
 #
-# `AdvancedParameter` values carry the initial value, fit boundaries, and a
-# scale estimate. `Fixed` marks a value as metadata-free configuration for the
-# current model.
+# The `@with_parameters` blocks above generated
+# `ConstructorOfFit2DTruncatedCrystalBall` and
+# `ConstructorOfFit2DTruncatedExponential`. Here we supply starting values,
+# bounds, and uncertainties for the fit parameters. `AdvancedParameter` carries
+# that metadata; `Fixed` marks a value that stays constant for this model.
 
 signal_kk = ConstructorOfFit2DTruncatedCrystalBall(
     AdvancedParameter("mu_B", 1.002 * PHI_MASS_GEV; boundaries = KK_LIMITS, uncertainty = 1e-4),
@@ -67,8 +203,8 @@ background_kk = ConstructorOfFit2DTruncatedExponential(
 
 # ## Assemble the extended 2D model
 #
-# The full model has three yield components: signal/signal, mixed
-# signal/background, and background/background.
+# `ConstructorOfFit2DExtendedKKComponents` follows the macro field order: yields
+# first, then the nested 1D constructors defined above.
 
 full_model_constructor = ConstructorOfFit2DExtendedKKComponents(
     AdvancedParameter("y_phiphi", 0.3 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
