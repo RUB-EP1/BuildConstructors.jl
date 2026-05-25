@@ -44,6 +44,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
                 "Optim with ComponentArrays" => "tutorials/optim-componentarrays.md",
                 "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
                 "2D Model Construction" => "tutorials/2d-model-construction.md",
+                "2D Minuit2 Fit" => "tutorials/2d-minuit2-fit.md",
             ],
         ],
         checkdocs=:exports,

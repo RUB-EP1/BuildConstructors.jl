@@ -215,3 +215,7 @@ end
 @testset "Flexible Parameter" begin
     include("test-parameter.jl")
 end
+
+@testset "Minuit2 ComponentArray interface" begin
+    include("examples/test_minuit2_ca_interface.jl")
+end
