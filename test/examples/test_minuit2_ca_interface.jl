@@ -30,4 +30,18 @@ using .Minuit2CAInterface: Minuit2CA, Minuit2CAInterface, converged, hesse!, min
     @test original(result).limits == [(-10.0, 10.0), (-10.0, 10.0)]
     @test hesse!(result; strategy = 1, maxcalls = 20) === result
     @test original(result).errors isa ComponentArray
+
+    named_result = optimize(
+        pars -> pars.a^2 + pars.b^2,
+        initial,
+        Minuit2CA(;
+            errors,
+            lower,
+            upper,
+            maxcalls = 50,
+            tolerance = 0.01,
+        ),
+    )
+    @test keys(minimizer(named_result)) == (:a, :b)
+    @test minimum(named_result) < 1e-3
 end

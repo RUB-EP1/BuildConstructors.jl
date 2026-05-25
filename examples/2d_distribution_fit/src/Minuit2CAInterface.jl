@@ -21,19 +21,23 @@ export converged
 export original
 export hesse!
 
+const OptionalRealVector = Union{Nothing, AbstractVector{<:Real}}
+const OptionalLimitVector = Union{Nothing, AbstractVector{<:Tuple{<:Real, <:Real}}}
+const OptionalNameCollection = Union{Nothing, AbstractVector{Symbol}, Tuple{Vararg{Symbol}}}
+
 Base.@kwdef struct Minuit2CA
     strategy::Int = 1
     tolerance::Float64 = 0.1
     errordef::Float64 = 1.0
     maxcalls::Int = 0
-    errors::Any = nothing
-    lower::Any = nothing
-    upper::Any = nothing
-    limits::Any = nothing
-    fixed::Any = nothing
-    names::Any = nothing
-    grad::Any = nothing
-    precision::Any = nothing
+    errors::OptionalRealVector = nothing
+    lower::OptionalRealVector = nothing
+    upper::OptionalRealVector = nothing
+    limits::OptionalLimitVector = nothing
+    fixed::Union{Nothing, AbstractVector{Bool}} = nothing
+    names::OptionalNameCollection = nothing
+    grad::Union{Nothing, Function} = nothing
+    precision::Union{Nothing, Real} = nothing
     run_hesse::Bool = false
     hesse_strategy::Int = strategy
     hesse_maxcalls::Int = 0
@@ -72,8 +76,17 @@ function Base.show(io::IO, result::Minuit2CAResult)
     )
 end
 
+function _wrap_objective(objective, axes)
+    return function wrapped_objective(p)
+        pars = p isa ComponentArray ? p : ComponentArray(p, axes)
+        return objective(pars)
+    end
+end
+
 function optimize(objective, initial::ComponentArray, settings::Minuit2CA = Minuit2CA())
-    minuit = Minuit(objective, initial; _minuit_keywords(initial, settings)...)
+    axes = getaxes(initial)
+    wrapped_objective = _wrap_objective(objective, axes)
+    minuit = Minuit(wrapped_objective, initial; _minuit_keywords(initial, settings)...)
     migrad!(
         minuit,
         settings.strategy;
@@ -84,7 +97,7 @@ function optimize(objective, initial::ComponentArray, settings::Minuit2CA = Minu
     if settings.run_hesse
         hesse!(minuit; strategy = settings.hesse_strategy, maxcalls = settings.hesse_maxcalls)
     end
-    values = ComponentArray(collect(minuit.values), getaxes(minuit.values))
+    values = ComponentArray(collect(minuit.values), axes)
     return Minuit2CAResult(
         values,
         minuit.fval,
