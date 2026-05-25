@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Model Construction · BuildConstructors.jl</title><meta name="title" content="2D Model Construction · BuildConstructors.jl"/><meta property="og:title" content="2D Model Construction · BuildConstructors.jl"/><meta property="twitter:title" content="2D Model Construction · BuildConstructors.jl"/><meta name="description" content="Documentation for BuildConstructors.jl."/><meta property="og:description" content="Documentation for BuildConstructors.jl."/><meta property="twitter:description" content="Documentation for BuildConstructors.jl."/><meta property="og:url" content="https://RUB-EP1.github.io/BuildConstructors.jl/tutorials/2d-model-construction/"/><meta property="twitter:url" content="https://RUB-EP1.github.io/BuildConstructors.jl/tutorials/2d-model-construction/"/><link rel="canonical" href="https://RUB-EP1.github.io/BuildConstructors.jl/tutorials/2d-model-construction/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">BuildConstructors.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../nested-constructors/">Nested Constructors</a></li><li><a class="tocitem" href="../optim-componentarrays/">Optim with ComponentArrays</a></li><li><a class="tocitem" href="../minuit2-componentarrays/">Minuit2 with ComponentArrays</a></li><li class="is-active"><a class="tocitem" href>2D Model Construction</a><ul class="internal"><li><a class="tocitem" href="#Load-the-data"><span>Load the data</span></a></li><li><a class="tocitem" href="#Build-the-one-dimensional-components"><span>Build the one-dimensional components</span></a></li><li><a class="tocitem" href="#Assemble-the-extended-2D-model"><span>Assemble the extended 2D model</span></a></li><li><a class="tocitem" href="#Inspect-the-parameter-metadata"><span>Inspect the parameter metadata</span></a></li><li><a class="tocitem" href="#Build-and-evaluate-the-model"><span>Build and evaluate the model</span></a></li><li><a class="tocitem" href="#Plot-the-model-and-projections"><span>Plot the model and projections</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>2D Model Construction</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Model Construction</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/RUB-EP1/BuildConstructors.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/RUB-EP1/BuildConstructors.jl/blob/main/docs/src/tutorials/2d-model-construction.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="2D-Model-Construction"><a class="docs-heading-anchor" href="#2D-Model-Construction">2D Model Construction</a><a id="2D-Model-Construction-1"></a><a class="docs-heading-anchor-permalink" href="#2D-Model-Construction" title="Permalink"></a></h1><p>This tutorial builds a two-dimensional extended mass model directly from <code>BuildConstructors</code> descriptors. It stops at model construction, data loading, metadata inspection, and plotting; minimizer setup belongs in separate tutorials.</p><p>The example uses <code>src/two_dimensional_model.jl</code> for constructor types, constants, and a thin wrapper around <code>DistributionsHEP.extended_negative_log_likelihood</code>. <code>ExtendedMixtureModel</code>, <code>marginalize</code>, and the extended NLL live in <code>DistributionsHEP.jl</code> (pinned to branch <code>codex/extended-mixture-model</code>).</p><pre><code class="language-julia hljs">using Arrow
+using BuildConstructors
+using CairoMakie
+using DataFrames
+using Distributions
+using DistributionsHEP
+
+example_dir = joinpath(@__DIR__, &quot;..&quot;, &quot;..&quot;, &quot;..&quot;, &quot;examples&quot;, &quot;2d_distribution_fit&quot;)
+model_source = joinpath(example_dir, &quot;src&quot;, &quot;two_dimensional_model.jl&quot;)
+
+include(model_source)</code></pre><h2 id="Load-the-data"><a class="docs-heading-anchor" href="#Load-the-data">Load the data</a><a id="Load-the-data-1"></a><a class="docs-heading-anchor-permalink" href="#Load-the-data" title="Permalink"></a></h2><p>The Arrow fixture stores the two K+K- masses in MeV. The model constants are in GeV, so the conversion and the fit-window cuts are intentionally visible here instead of hidden behind a helper function.</p><pre><code class="language-julia hljs">fit_events_path = joinpath(example_dir, &quot;data&quot;, &quot;fit_events.arrow&quot;)
+fit_df = DataFrame(Arrow.Table(fit_events_path); copycols = true)
+
+transform!(
+    fit_df,
+    :mKK1 =&gt; ByRow(x -&gt; x / 1e3) =&gt; :mKK1,
+    :mKK2 =&gt; ByRow(x -&gt; x / 1e3) =&gt; :mKK2,
+)
+
+subset!(
+    fit_df,
+    :mKK1 =&gt; x -&gt; KK_LIMITS[1] .&lt; x .&lt; KK_LIMITS[2],
+    :mKK2 =&gt; x -&gt; KK_LIMITS[1] .&lt; x .&lt; KK_LIMITS[2],
+)
+
+data2d = collect.(zip(fit_df.mKK1, fit_df.mKK2))
+n_events = length(data2d)</code></pre><h2 id="Build-the-one-dimensional-components"><a class="docs-heading-anchor" href="#Build-the-one-dimensional-components">Build the one-dimensional components</a><a id="Build-the-one-dimensional-components-1"></a><a class="docs-heading-anchor-permalink" href="#Build-the-one-dimensional-components" title="Permalink"></a></h2><p><code>AdvancedParameter</code> values carry the initial value, fit boundaries, and a scale estimate. <code>Fixed</code> marks a value as metadata-free configuration for the current model.</p><pre><code class="language-julia hljs">signal_kk = ConstructorOfFit2DTruncatedCrystalBall(
+    AdvancedParameter(&quot;mu_B&quot;, 1.002 * PHI_MASS_GEV; boundaries = KK_LIMITS, uncertainty = 1e-4),
+    AdvancedParameter(&quot;sigma_B&quot;, 0.0025; boundaries = (1e-4, 0.02), uncertainty = 2e-4),
+    AdvancedParameter(&quot;alpha_B&quot;, 2.0; boundaries = (0.2, 10.0), uncertainty = 0.1),
+    BuildConstructors.Fixed(2.5),
+    KK_LIMITS,
+)
+
+background_kk = ConstructorOfFit2DTruncatedExponential(
+    AdvancedParameter(&quot;k_bkg_kk&quot;, -0.2; boundaries = (-50.0, -1e-6), uncertainty = 0.05),
+    KK_LIMITS,
+)</code></pre><h2 id="Assemble-the-extended-2D-model"><a class="docs-heading-anchor" href="#Assemble-the-extended-2D-model">Assemble the extended 2D model</a><a id="Assemble-the-extended-2D-model-1"></a><a class="docs-heading-anchor-permalink" href="#Assemble-the-extended-2D-model" title="Permalink"></a></h2><p>The full model has three yield components: signal/signal, mixed signal/background, and background/background.</p><pre><code class="language-julia hljs">full_model_constructor = ConstructorOfFit2DExtendedKKComponents(
+    signal_kk,
+    background_kk,
+    AdvancedParameter(&quot;y_phiphi&quot;, 0.3 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
+    AdvancedParameter(&quot;y_mixed&quot;, 0.1 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
+    AdvancedParameter(&quot;y_kkkk&quot;, 0.6 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
+)</code></pre><h2 id="Inspect-the-parameter-metadata"><a class="docs-heading-anchor" href="#Inspect-the-parameter-metadata">Inspect the parameter metadata</a><a id="Inspect-the-parameter-metadata-1"></a><a class="docs-heading-anchor-permalink" href="#Inspect-the-parameter-metadata" title="Permalink"></a></h2><p><code>BuildConstructors</code> keeps the starting values, bounds, and uncertainties in the descriptor tree. These accessors are useful before any fitting machinery is involved.</p><pre><code class="language-julia hljs">parameter_values(full_model_constructor)
+parameter_lower_boundaries(full_model_constructor)
+parameter_upper_boundaries(full_model_constructor)
+parameter_uncertainties(full_model_constructor)</code></pre><h2 id="Build-and-evaluate-the-model"><a class="docs-heading-anchor" href="#Build-and-evaluate-the-model">Build and evaluate the model</a><a id="Build-and-evaluate-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Build-and-evaluate-the-model" title="Permalink"></a></h2><p><code>build_model</code> turns the descriptor tree into an ordinary distribution object.</p><pre><code class="language-julia hljs">pars = parameter_values(full_model_constructor)
+model = build_model(full_model_constructor, pars)
+
+first_event = first(data2d)
+model(first_event)
+log(model(first_event))
+extended_negative_log_likelihood(model, data2d)
+extended_negative_log_likelihood(full_model_constructor, pars, data2d)</code></pre><h2 id="Plot-the-model-and-projections"><a class="docs-heading-anchor" href="#Plot-the-model-and-projections">Plot the model and projections</a><a id="Plot-the-model-and-projections-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-the-model-and-projections" title="Permalink"></a></h2><p><code>ExtendedMixtureModel</code> is callable: <code>model(x)</code> returns the extended density, whose integral over the support is the total expected yield. The 2D heatmap and the two one-dimensional projections below are diagnostic views of the starting model, not fitted results.</p><pre><code class="language-julia hljs">mass_grid = range(KK_LIMITS[1], KK_LIMITS[2]; length = 160)
+density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
+
+fig = Figure(size = (900, 760))
+ax = Axis(
+    fig[1, 1],
+    xlabel = &quot;m(K^{+}K^{-})_{1} [GeV]&quot;,
+    ylabel = &quot;m(K^{+}K^{-})_{2} [GeV]&quot;,
+    title = &quot;Starting 2D extended model&quot;,
+)
+hm = heatmap!(ax, mass_grid, mass_grid, density_grid)
+scatter!(ax, fit_df.mKK1, fit_df.mKK2; markersize = 2, color = (:white, 0.35))
+Colorbar(fig[1, 2], hm, label = &quot;extended density&quot;)
+
+step = (last(mass_grid) - first(mass_grid)) / (length(mass_grid) - 1)
+marginal_1 = DistributionsHEP.marginalize(model, 1)
+marginal_2 = DistributionsHEP.marginalize(model, 2)
+projection_1 = marginal_1.(mass_grid)
+projection_2 = marginal_2.(mass_grid)
+
+ax1 = Axis(fig[2, 1], xlabel = &quot;m(K^{+}K^{-})_{1} [GeV]&quot;, ylabel = &quot;events / bin&quot;)
+hist!(ax1, fit_df.mKK1; bins = 60, color = (:steelblue, 0.35), strokewidth = 0)
+lines!(ax1, mass_grid, projection_1 .* (KK_LIMITS[2] - KK_LIMITS[1]) / 60; color = :black, linewidth = 2)
+
+ax2 = Axis(fig[3, 1], xlabel = &quot;m(K^{+}K^{-})_{2} [GeV]&quot;, ylabel = &quot;events / bin&quot;)
+hist!(ax2, fit_df.mKK2; bins = 60, color = (:darkorange, 0.35), strokewidth = 0)
+lines!(ax2, mass_grid, projection_2 .* (KK_LIMITS[2] - KK_LIMITS[1]) / 60; color = :black, linewidth = 2)
+
+fig</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../minuit2-componentarrays/">« Minuit2 with ComponentArrays</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 25 May 2026 19:01">Monday 25 May 2026</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
