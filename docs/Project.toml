@@ -20,4 +20,5 @@ Documenter = "1"
 
 [sources]
 BuildConstructors = {path = ".."}
+DistributionsHEP = {url = "https://github.com/JuliaHEP/DistributionsHEP.jl", rev = "codex/extended-mixture-model"}
 Minuit2 = {url = "https://github.com/JuliaHEP/Minuit2.jl", rev = "codex/remove-roofit-core"}

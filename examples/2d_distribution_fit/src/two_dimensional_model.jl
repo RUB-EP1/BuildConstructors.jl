@@ -1,6 +1,6 @@
 using BuildConstructors
 using Distributions
-using DistributionsHEP
+using DistributionsHEP: ExtendedMixtureModel, extended_negative_log_likelihood
 using NumericalDistributions
 
 const MASS_MIN_GEV = 1.002
@@ -11,8 +11,6 @@ const PHI_MASS_GEV = 1.019461
 
 const CCBAR_LIMITS = (CCBAR_MIN_GEV, CCBAR_MAX_GEV)
 const KK_LIMITS = (MASS_MIN_GEV, MASS_MAX_GEV)
-
-include("extended_mixture_model.jl")
 
 @with_parameters(Fit2DTruncatedCrystalBall,
     mu::P, sigma::P, alpha::P, n::P,
@@ -48,21 +46,6 @@ include("extended_mixture_model.jl")
 
         return ExtendedMixtureModel([phiphi, mixed, kkkk], [y_phiphi, y_mixed, y_kkkk])
     end)
-
-function _finite_logpdf(model, x)
-    lp = logpdf(model, x)
-    return isfinite(lp) ? lp : -Inf
-end
-
-function extended_negative_log_likelihood(model, data)
-    nll = 0.0
-    for x in data
-        lp = _finite_logpdf(model, x)
-        isfinite(lp) || return Inf
-        nll -= lp
-    end
-    return nll + total_yield(model)
-end
 
 function extended_negative_log_likelihood(constructor::BuildConstructors.AbstractConstructor, pars, data)
     try

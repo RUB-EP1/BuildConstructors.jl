@@ -5,19 +5,17 @@
 # metadata inspection, and plotting; minimizer setup belongs in separate
 # tutorials.
 #
-# The example uses two small local support files:
-#
-# - `src/two_dimensional_model.jl` defines only constructor types, constants,
-#   compatibility shims, and the extended negative log-likelihood.
-# - `src/extended_mixture_model.jl` contains generic extended-mixture
-#   distribution functionality. It is kept separate because it should migrate to
-#   `DistributionsHEP.jl` or another shared distribution package later.
+# The example uses `src/two_dimensional_model.jl` for constructor types,
+# constants, and a thin wrapper around `DistributionsHEP.extended_negative_log_likelihood`.
+# `ExtendedMixtureModel`, `marginalize`, and the extended NLL live in
+# `DistributionsHEP.jl` (pinned to branch `codex/extended-mixture-model`).
 
 using Arrow
 using BuildConstructors
 using CairoMakie
 using DataFrames
 using Distributions
+using DistributionsHEP
 
 example_dir = joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit")
 model_source = joinpath(example_dir, "src", "two_dimensional_model.jl")
@@ -99,20 +97,20 @@ pars = parameter_values(full_model_constructor)
 model = build_model(full_model_constructor, pars)
 
 first_event = first(data2d)
-pdf(model, first_event)
-logpdf(model, first_event)
+model(first_event)
+log(model(first_event))
 extended_negative_log_likelihood(model, data2d)
 extended_negative_log_likelihood(full_model_constructor, pars, data2d)
 
 # ## Plot the model and projections
 #
-# The density returned by `pdf(model, x)` is an extended density, so its
-# integral over the model support is the total expected yield. The 2D heatmap
+# `ExtendedMixtureModel` is callable: `model(x)` returns the extended density,
+# whose integral over the support is the total expected yield. The 2D heatmap
 # and the two one-dimensional projections below are diagnostic views of the
 # starting model, not fitted results.
 
 mass_grid = range(KK_LIMITS[1], KK_LIMITS[2]; length = 160)
-density_grid = [pdf(model, [m1, m2]) for m1 in mass_grid, m2 in mass_grid]
+density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
 
 fig = Figure(size = (900, 760))
 ax = Axis(
@@ -126,10 +124,10 @@ scatter!(ax, fit_df.mKK1, fit_df.mKK2; markersize = 2, color = (:white, 0.35))
 Colorbar(fig[1, 2], hm, label = "extended density")
 
 step = (last(mass_grid) - first(mass_grid)) / (length(mass_grid) - 1)
-marginal_1 = marginalize(model, 1)
-marginal_2 = marginalize(model, 2)
-projection_1 = pdf.(Ref(marginal_1), mass_grid)
-projection_2 = pdf.(Ref(marginal_2), mass_grid)
+marginal_1 = DistributionsHEP.marginalize(model, 1)
+marginal_2 = DistributionsHEP.marginalize(model, 2)
+projection_1 = marginal_1.(mass_grid)
+projection_2 = marginal_2.(mass_grid)
 
 ax1 = Axis(fig[2, 1], xlabel = "m(K^{+}K^{-})_{1} [GeV]", ylabel = "events / bin")
 hist!(ax1, fit_df.mKK1; bins = 60, color = (:steelblue, 0.35), strokewidth = 0)

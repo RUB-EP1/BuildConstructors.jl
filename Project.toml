@@ -15,10 +15,13 @@ NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
 [extensions]
 PhysicsModelsExt = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistributions"]
 
+[sources]
+DistributionsHEP = {url = "https://github.com/JuliaHEP/DistributionsHEP.jl", rev = "codex/extended-mixture-model"}
+
 [compat]
 ComponentArrays = ">=0.15"
 Distributions = ">=0.25"
-DistributionsHEP = ">=0.5.0"
+DistributionsHEP = "0.6"
 JSON = ">=0.21.4"
 NumericalDistributions = ">=0.5.3"
 OrderedCollections = "1.8.1"
