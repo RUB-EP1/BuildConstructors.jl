@@ -20,13 +20,9 @@ using DataFrames
 using Distributions
 
 example_dir = joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit")
-cd(example_dir)
+model_source = joinpath(example_dir, "src", "two_dimensional_model.jl")
 
-if isfile(joinpath(@__DIR__, "src", "two_dimensional_model.jl"))
-    include("src/two_dimensional_model.jl")
-else
-    include(abspath("src/two_dimensional_model.jl"))
-end
+include(model_source)
 
 # ## Load the data
 #
@@ -34,7 +30,8 @@ end
 # in GeV, so the conversion and the fit-window cuts are intentionally visible
 # here instead of hidden behind a helper function.
 
-fit_df = DataFrame(Arrow.Table("data/fit_events.arrow"); copycols = true)
+fit_events_path = joinpath(example_dir, "data", "fit_events.arrow")
+fit_df = DataFrame(Arrow.Table(fit_events_path); copycols = true)
 
 transform!(
     fit_df,
@@ -129,8 +126,10 @@ scatter!(ax, fit_df.mKK1, fit_df.mKK2; markersize = 2, color = (:white, 0.35))
 Colorbar(fig[1, 2], hm, label = "extended density")
 
 step = (last(mass_grid) - first(mass_grid)) / (length(mass_grid) - 1)
-projection_1 = [sum(pdf(model, [m1, m2]) for m2 in mass_grid) * step for m1 in mass_grid]
-projection_2 = [sum(pdf(model, [m1, m2]) for m1 in mass_grid) * step for m2 in mass_grid]
+marginal_1 = marginalize(model, 1)
+marginal_2 = marginalize(model, 2)
+projection_1 = pdf.(Ref(marginal_1), mass_grid)
+projection_2 = pdf.(Ref(marginal_2), mass_grid)
 
 ax1 = Axis(fig[2, 1], xlabel = "m(K^{+}K^{-})_{1} [GeV]", ylabel = "events / bin")
 hist!(ax1, fit_df.mKK1; bins = 60, color = (:steelblue, 0.35), strokewidth = 0)
