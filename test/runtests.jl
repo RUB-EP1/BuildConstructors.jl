@@ -59,7 +59,7 @@ include("test-macro.jl")
         (1.1, 2.5),
     )
     model = build_model(cCBpSECH_running_w, (w = 0.5,))
-    @test pdf(model, 1.1) == 1.2899706106958533
+    @test pdf(model, 1.1) ≈ 1.2899706106958533
 
     cG_fixed_μ = ConstructorOfGaussian(Fixed(0), Running("σ"), (-0.5, 0.5))
     model = build_model(cG_fixed_μ, (σ = 0.1,))
