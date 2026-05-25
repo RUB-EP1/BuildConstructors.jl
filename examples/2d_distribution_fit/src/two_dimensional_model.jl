@@ -1,6 +1,7 @@
 using BuildConstructors
 using Distributions
-using DistributionsHEP: ExtendedMixtureModel, extended_negative_log_likelihood
+using DistributionsHEP: ExtendedMixtureModel
+import DistributionsHEP: extended_negative_log_likelihood
 using NumericalDistributions
 
 const MASS_MIN_GEV = 1.002

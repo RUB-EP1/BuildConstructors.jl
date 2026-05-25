@@ -71,11 +71,11 @@ background_kk = ConstructorOfFit2DTruncatedExponential(
 # signal/background, and background/background.
 
 full_model_constructor = ConstructorOfFit2DExtendedKKComponents(
-    signal_kk,
-    background_kk,
     AdvancedParameter("y_phiphi", 0.3 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
     AdvancedParameter("y_mixed", 0.1 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
     AdvancedParameter("y_kkkk", 0.6 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
+    signal_kk,
+    background_kk,
 )
 
 # ## Inspect the parameter metadata
@@ -137,4 +137,8 @@ ax2 = Axis(fig[3, 1], xlabel = "m(K^{+}K^{-})_{2} [GeV]", ylabel = "events / bin
 hist!(ax2, fit_df.mKK2; bins = 60, color = (:darkorange, 0.35), strokewidth = 0)
 lines!(ax2, mass_grid, projection_2 .* (KK_LIMITS[2] - KK_LIMITS[1]) / 60; color = :black, linewidth = 2)
 
-fig
+assets_dir = joinpath(@__DIR__, "..", "..", "src", "assets")
+mkpath(assets_dir)
+save(joinpath(assets_dir, "2d-model-construction-start.png"), fig)
+
+# ![Starting 2D extended model and projections](../assets/2d-model-construction-start.png)

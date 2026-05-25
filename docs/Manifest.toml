@@ -161,7 +161,7 @@ version = "0.3.7"
 deps = ["OrderedCollections"]
 path = ".."
 uuid = "63b9b590-f22f-4e79-810f-ea9ba6849c26"
-version = "0.6.0"
+version = "0.7.0"
 weakdeps = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistributions"]
 
     [deps.BuildConstructors.extensions]
@@ -488,7 +488,7 @@ version = "0.25.125"
 
 [[deps.DistributionsHEP]]
 deps = ["Distributions", "Polynomials", "Random", "SpecialFunctions"]
-git-tree-sha1 = "83b79aa5dfd9223200289138b4a340c27ca01083"
+git-tree-sha1 = "62c779606567c4115fedbf15a4b16610cc0eb316"
 repo-rev = "codex/extended-mixture-model"
 repo-url = "https://github.com/JuliaHEP/DistributionsHEP.jl"
 uuid = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
