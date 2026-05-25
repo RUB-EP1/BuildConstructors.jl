@@ -3,8 +3,6 @@ using Distributions
 using DistributionsHEP
 using NumericalDistributions
 
-import Distributions: logpdf
-
 const MASS_MIN_GEV = 1.002
 const MASS_MAX_GEV = 1.038
 const CCBAR_MIN_GEV = 2.80
@@ -14,24 +12,12 @@ const PHI_MASS_GEV = 1.019461
 const CCBAR_LIMITS = (CCBAR_MIN_GEV, CCBAR_MAX_GEV)
 const KK_LIMITS = (MASS_MIN_GEV, MASS_MAX_GEV)
 
-# Local compatibility shims for DistributionsHEP behavior that should move
-# upstream once the corresponding package issues are resolved.
-function logpdf(d::CrystalBall{T}, x::Real) where {T<:Real}
-    p = pdf(d, x)
-    return p <= 0 ? -Inf : log(p)
-end
-
-function _crystalball(mu, sigma, alpha, n)
-    T = promote_type(typeof(mu), typeof(sigma), typeof(alpha), typeof(n))
-    return CrystalBall(T(mu), T(sigma), T(alpha), T(n))
-end
-
 include("extended_mixture_model.jl")
 
 @with_parameters(Fit2DTruncatedCrystalBall,
     mu::P, sigma::P, alpha::P, n::P,
     support::Tuple{Float64,Float64}, begin
-        truncated(_crystalball(mu, sigma, alpha, n), support...)
+        truncated(CrystalBall(mu, sigma, alpha, n), support...)
     end)
 
 @with_parameters(Fit2DTruncatedExponential,
