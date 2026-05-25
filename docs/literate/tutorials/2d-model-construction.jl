@@ -149,6 +149,7 @@ using BuildConstructors
 using DataFrames
 using Distributions
 using DistributionsHEP
+using FHist
 using Plots
 
 example_dir = joinpath(@__DIR__, "..", "..", "..", "examples", "2d_distribution_fit")
@@ -163,7 +164,7 @@ include(model_source)
 # here instead of hidden behind a helper function.
 
 fit_events_path = joinpath(example_dir, "data", "fit_events.arrow")
-fit_df = DataFrame(Arrow.Table(fit_events_path); copycols = true)
+fit_df = DataFrame(Arrow.Table(fit_events_path); copycols=true)
 
 transform!(
     fit_df,
@@ -189,15 +190,15 @@ n_events = length(data2d)
 # that metadata; `Fixed` marks a value that stays constant for this model.
 
 signal_kk = ConstructorOfFit2DTruncatedCrystalBall(
-    AdvancedParameter("mu_B", 1.002 * PHI_MASS_GEV; boundaries = KK_LIMITS, uncertainty = 1e-4),
-    AdvancedParameter("sigma_B", 0.0025; boundaries = (1e-4, 0.02), uncertainty = 2e-4),
-    AdvancedParameter("alpha_B", 2.0; boundaries = (0.2, 10.0), uncertainty = 0.1),
+    AdvancedParameter("mu_B", PHI_MASS_GEV; boundaries=KK_LIMITS, uncertainty=1e-4),
+    AdvancedParameter("sigma_B", 0.0027; boundaries=(1e-4, 0.02), uncertainty=2e-4),
+    AdvancedParameter("alpha_B", 2.0; boundaries=(0.2, 10.0), uncertainty=0.1),
     BuildConstructors.Fixed(2.5),
     KK_LIMITS,
 )
 
 background_kk = ConstructorOfFit2DTruncatedExponential(
-    AdvancedParameter("k_bkg_kk", -0.2; boundaries = (-50.0, -1e-6), uncertainty = 0.05),
+    AdvancedParameter("k_bkg_kk", -0.2; boundaries=(-50.0, -1e-6), uncertainty=0.05),
     KK_LIMITS,
 )
 
@@ -207,9 +208,9 @@ background_kk = ConstructorOfFit2DTruncatedExponential(
 # first, then the nested 1D constructors defined above.
 
 full_model_constructor = ConstructorOfFit2DExtendedKKComponents(
-    AdvancedParameter("y_phiphi", 0.3 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
-    AdvancedParameter("y_mixed", 0.1 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
-    AdvancedParameter("y_kkkk", 0.6 * n_events; boundaries = (0.0, n_events), uncertainty = sqrt(n_events)),
+    AdvancedParameter("y_phiphi", 0.6 * n_events; boundaries=(0.0, n_events), uncertainty=sqrt(n_events)),
+    AdvancedParameter("y_mixed", 0.2 * n_events; boundaries=(0.0, n_events), uncertainty=sqrt(n_events)),
+    AdvancedParameter("y_kkkk", 0.2 * n_events; boundaries=(0.0, n_events), uncertainty=sqrt(n_events)),
     signal_kk,
     background_kk,
 )
@@ -246,10 +247,10 @@ extended_negative_log_likelihood(full_model_constructor, pars, data2d)
 # plane. The one-dimensional histograms compare each marginal to the model
 # projection.
 
-gr()
-theme(:boxed)
+theme(:boxed; ylims=(0, :auto))
 
-mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length = 160))
+n_edges = 45
+mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length=160))
 density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
 
 marginal_1 = DistributionsHEP.marginalize(model, 1)
@@ -257,61 +258,51 @@ marginal_2 = DistributionsHEP.marginalize(model, 2)
 projection_1 = marginal_1.(mass_grid)
 projection_2 = marginal_2.(mass_grid)
 
-bin_scale = (KK_LIMITS[2] - KK_LIMITS[1]) / 60
+bin_size = (KK_LIMITS[2] - KK_LIMITS[1]) / (n_edges - 1)
 
-p_model = heatmap(
-    mass_grid,
-    mass_grid,
-    density_grid;
-    xlabel = "m(K⁺K⁻)₁ [GeV]",
-    ylabel = "m(K⁺K⁻)₂ [GeV]",
-    title = "Starting 2D extended model",
-    colorbar_title = "extended density",
-    color = :viridis,
-)
+let
+    plot(layout=(2, 2), size=(900, 760))
+    heatmap!(
+        mass_grid,
+        mass_grid,
+        density_grid;
+        xlabel="m(K⁺K⁻)₁ [GeV]",
+        ylabel="m(K⁺K⁻)₂ [GeV]",
+        title="Starting 2D extended model",
+        colorbar_title="extended density",
+        color=:viridis,
+        sp=1,
+    )
 
-p_data = histogram2d(
-    fit_df.mKK1,
-    fit_df.mKK2;
-    bins = (60, 60),
-    xlabel = "m(K⁺K⁻)₁ [GeV]",
-    ylabel = "m(K⁺K⁻)₂ [GeV]",
-    title = "Data",
-    color = :blues,
-)
+    histogram2d!(
+        fit_df.mKK1,
+        fit_df.mKK2;
+        bins=(60, 60),
+        xlabel="m(K⁺K⁻)₁ [GeV]",
+        ylabel="m(K⁺K⁻)₂ [GeV]",
+        title="Data",
+        color=:blues,
+        sp=2,
+    )
 
-p_m1 = histogram(
-    fit_df.mKK1;
-    bins = 60,
-    fillcolor = :steelblue,
-    fillalpha = 0.45,
-    linecolor = :steelblue,
-    linewidth = 0.5,
-    xlabel = "m(K⁺K⁻)₁ [GeV]",
-    ylabel = "events / bin",
-    title = "m(K⁺K⁻)₁ projection",
-)
-plot!(p_m1, mass_grid, projection_1 .* bin_scale; color = :black)
+    h = Hist1D(fit_df.mKK1, binedges=range(KK_LIMITS[1], KK_LIMITS[2]; length=n_edges))
+    plot!(h;
+        c=:lightgreen, lc=:green,
+        xlabel="m(K⁺K⁻)₁ [GeV]",
+        ylabel="count",
+        title="Data projection",
+        sp=3,
+        seriestype=:barbins
+    )
+    plot!(mass_grid, projection_1 .* bin_size; color=:black, lw=2, sp=3)
 
-p_m2 = histogram(
-    fit_df.mKK2;
-    bins = 60,
-    fillcolor = :darkorange,
-    fillalpha = 0.45,
-    linecolor = :darkorange,
-    linewidth = 0.5,
-    xlabel = "m(K⁺K⁻)₂ [GeV]",
-    ylabel = "events / bin",
-    title = "m(K⁺K⁻)₂ projection",
-)
-plot!(p_m2, mass_grid, projection_2 .* bin_scale; color = :black)
-
-plot(
-    p_model,
-    p_data,
-    p_m1,
-    p_m2;
-    layout = (2, 2),
-    size = (900, 760),
-    link = :none,
-)
+    h = Hist1D(fit_df.mKK1, binedges=range(KK_LIMITS[1], KK_LIMITS[2]; length=n_edges))
+    plot!(h; c=:lightblue, lc=:blue,
+        xlabel="m(K⁺K⁻)₂ [GeV]",
+        ylabel="count",
+        title="m(K⁺K⁻)₂ projection",
+        sp=4,
+        seriestype=:stepbins
+    )
+    plot!(mass_grid, projection_2 .* bin_size; color=:black, lw=2, sp=4)
+end

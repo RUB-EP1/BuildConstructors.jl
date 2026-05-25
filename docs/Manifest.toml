@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "407b071011c2ecf97a48f36299d3e13bcf4b5581"
+project_hash = "470782914640eecfb75ade505ba2b714275235f1"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "bbc22a9a08a0ef6460041086d8a7b27940ed4ffd"
@@ -123,6 +123,11 @@ version = "1.1.0"
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 version = "1.11.0"
 
+[[deps.BayesHistogram]]
+git-tree-sha1 = "5d5dda960067751bc1534aba765f771325044501"
+uuid = "000d9b38-65fe-4c81-bdb9-69f01f102479"
+version = "1.0.7"
+
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
@@ -155,6 +160,12 @@ deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jl
 git-tree-sha1 = "1fa950ebc3e37eccd51c6a8fe1f92f7d86263522"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.7+0"
+
+[[deps.Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "9cb23bbb1127eefb022b022481466c0f1127d430"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.2"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
@@ -418,11 +429,11 @@ version = "0.25.125"
 
 [[deps.DistributionsHEP]]
 deps = ["Distributions", "Polynomials", "Random", "SpecialFunctions"]
-git-tree-sha1 = "62c779606567c4115fedbf15a4b16610cc0eb316"
+git-tree-sha1 = "0404d1795f896690a9c72041dfb71df3cd00973c"
 repo-rev = "codex/extended-mixture-model"
-repo-url = "https://github.com/JuliaHEP/DistributionsHEP.jl"
+repo-url = "https://github.com/JuliaHEP/DistributionsHEP.jl.git"
 uuid = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
-version = "0.6.0"
+version = "0.6.1"
 
 [[deps.DocStringExtensions]]
 git-tree-sha1 = "7442a5dfe1ebb773c29cc2962a8980f47221d76c"
@@ -491,6 +502,24 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "6866aec60ef98e3164cd8d6855225684207e9dff"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.12+0"
+
+[[deps.FHist]]
+deps = ["BayesHistogram", "LinearAlgebra", "Measurements", "Statistics", "StatsBase"]
+git-tree-sha1 = "0f80fb58929285341490b8e690bcdfbe0cb7f2c0"
+uuid = "68837c9b-b678-4cd5-9925-8a54edc8f695"
+version = "0.11.19"
+
+    [deps.FHist.extensions]
+    FHistHDF5Ext = "HDF5"
+    FHistMakieExt = "Makie"
+    FHistPlotsExt = ["RecipesBase", "Plots"]
+
+    [deps.FHist.weakdeps]
+    CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+    HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+    Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+    Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -945,6 +974,28 @@ version = "1.1.10"
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.6+0"
+
+[[deps.Measurements]]
+deps = ["Calculus", "LinearAlgebra", "Printf"]
+git-tree-sha1 = "cb47f69a1cab9dcec7ff4a5d6e163410d6905866"
+uuid = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
+version = "2.14.1"
+
+    [deps.Measurements.extensions]
+    MeasurementsBaseTypeExt = "BaseType"
+    MeasurementsJunoExt = "Juno"
+    MeasurementsMakieExt = "Makie"
+    MeasurementsRecipesBaseExt = "RecipesBase"
+    MeasurementsSpecialFunctionsExt = "SpecialFunctions"
+    MeasurementsUnitfulExt = "Unitful"
+
+    [deps.Measurements.weakdeps]
+    BaseType = "7fbed51b-1ef5-4d67-9085-a4a9b26f478c"
+    Juno = "e5e0dc1b-0480-54bc-9374-aad01c23163d"
+    Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+    Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [[deps.Measures]]
 git-tree-sha1 = "b513cedd20d9c914783d8ad83d08120702bf2c77"
@@ -1509,16 +1560,12 @@ deps = ["Dates", "UUIDs"]
 git-tree-sha1 = "82bee338d650aa515f31866c460cb7e3bcef90b8"
 uuid = "ec057cc2-7a8d-4b58-b3b3-92acb9f63b42"
 version = "2.8.2"
+weakdeps = ["Measurements", "StaticArraysCore", "Tables"]
 
     [deps.StructUtils.extensions]
     StructUtilsMeasurementsExt = ["Measurements"]
     StructUtilsStaticArraysCoreExt = ["StaticArraysCore"]
     StructUtilsTablesExt = ["Tables"]
-
-    [deps.StructUtils.weakdeps]
-    Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
-    StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-    Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [[deps.StyledStrings]]
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"

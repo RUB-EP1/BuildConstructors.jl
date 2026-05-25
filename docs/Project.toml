@@ -6,6 +6,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DistributionsHEP = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+FHist = "68837c9b-b678-4cd5-9925-8a54edc8f695"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Minuit2 = "37821647-3276-4ed8-9a4e-bc9886b3c106"
@@ -16,7 +17,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
 BuildConstructors = {path = ".."}
-DistributionsHEP = {rev = "codex/extended-mixture-model", url = "https://github.com/JuliaHEP/DistributionsHEP.jl"}
+DistributionsHEP = {rev = "codex/extended-mixture-model", url = "https://github.com/JuliaHEP/DistributionsHEP.jl.git"}
 Minuit2 = {rev = "codex/remove-roofit-core", url = "https://github.com/JuliaHEP/Minuit2.jl"}
 
 [compat]
