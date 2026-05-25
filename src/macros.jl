@@ -85,49 +85,36 @@ function generate_type_parameters(n_params, n_parametric_fields)
     return param_type_params, parametric_type_params
 end
 
-# Multiple dispatch: Add struct field definition based on field type
-# Mutates struct_fields
-function add_struct_field!(struct_fields, field::ParametricField, parametric_idx)
+# Multiple dispatch: Add struct field definition based on field type.
+# Takes both index counters; each method returns the updated pair.
+function add_struct_field!(struct_fields, field::ParametricField, param_idx, parametric_idx)
     type_param = Symbol("P", parametric_idx)
     push!(struct_fields.args, Expr(:(::), field.name, type_param))
-    return parametric_idx + 1
+    return param_idx, parametric_idx + 1
 end
 
-function add_struct_field!(struct_fields, field::DescriptorField, param_idx)
+function add_struct_field!(struct_fields, field::DescriptorField, param_idx, parametric_idx)
     type_param = Symbol("T", param_idx)
     field_name = Symbol("description_of_", field.name)
     push!(struct_fields.args, Expr(:(::), field_name, type_param))
-    return param_idx + 1
+    return param_idx + 1, parametric_idx
 end
 
-function add_struct_field!(struct_fields, field::ConstantField, _)
+function add_struct_field!(struct_fields, field::ConstantField, param_idx, parametric_idx)
     push!(struct_fields.args, Expr(:(::), field.name, field.type_expr))
-    return nothing  # unused index slot for ConstantField
+    return param_idx, parametric_idx
 end
 
-# Helper: Generate struct fields in reordered format: parametric first, then parameters, then constants
+# Helper: Generate struct fields in macro header declaration order
 function generate_struct_fields(ordered_fields)
     struct_fields = Expr(:block)
 
-    # Track indices for type parameters
     param_idx = 1
     parametric_idx = 1
 
-    # Parametric fields (declaration order)
     for field in ordered_fields
-        field isa ParametricField &&
-            (parametric_idx = add_struct_field!(struct_fields, field, parametric_idx))
-    end
-
-    # Descriptor fields (`::P`)
-    for field in ordered_fields
-        field isa DescriptorField &&
-            (param_idx = add_struct_field!(struct_fields, field, param_idx))
-    end
-
-    # Typed constant fields
-    for field in ordered_fields
-        field isa ConstantField && add_struct_field!(struct_fields, field, nothing)
+        param_idx, parametric_idx =
+            add_struct_field!(struct_fields, field, param_idx, parametric_idx)
     end
 
     return struct_fields
@@ -312,9 +299,8 @@ The macro separates fields into three roles:
   inferred type parameter. This is useful for nested constructors or arbitrary
   user objects. Inside `body`, use bare `field`.
 
-The generated constructor argument order is parametric fields first, parameter
-descriptor fields second, and constant fields last. This keeps all generated
-constructors predictable even when fields are declared in a mixed order.
+The generated struct fields and constructor positional arguments follow the same
+order as the field list in the macro header.
 
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and

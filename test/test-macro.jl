@@ -137,8 +137,7 @@ end
 
 @testset "Macro constant slot: bare field name" begin
     inner = ConstructorOfGaussian(Fixed(0.0), Fixed(0.1), (-0.5, 0.5))
-    # Argument order: descriptor fields, then constant fields.
-    cs = ConstructorOfScaleMacroConstD(Fixed(2.0), inner)
+    cs = ConstructorOfScaleMacroConstD(inner, Fixed(2.0))
     model = build_model(cs, NamedTuple())
     @test model isa Distribution
     @test pdf(model, 0.0) > 0
@@ -166,10 +165,13 @@ end
 end)
 
 @testset "constant slot named c before descriptors" begin
-    # Constructor order is descriptors first (`λ`), then typed constants (`c`), regardless of
-    # declaration order in the macro header (see package docs).
-    ct = ConstructorOfFieldNamedCSlotConstFirst(Fixed(10.0), 2.0)
+    ct = ConstructorOfFieldNamedCSlotConstFirst(2.0, Fixed(10.0))
     @test build_model(ct, NamedTuple()) == 12.0
+end
+
+@testset "constructor argument order matches declaration order" begin
+    @test fieldnames(ConstructorOfFieldNamedCSlotConstFirst) == (:c, :description_of_λ)
+    @test fieldnames(ConstructorOfScaleMacroConstD) == (:D, :description_of_scale)
 end
 
 println("All macro tests passed!")

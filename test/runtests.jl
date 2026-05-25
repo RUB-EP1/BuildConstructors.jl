@@ -78,6 +78,7 @@ end
 
 
 cM_running_w = ConstructorOfPRBModel(
+    Fixed(0.5),
     ConstructorOfBW(Fixed(3.8), Fixed(0.1), (1.0, 2.6)),
     ConstructorOfCBpSECH(
         Fixed(0.002795),
@@ -91,7 +92,6 @@ cM_running_w = ConstructorOfPRBModel(
         (-0.5, 0.5),
     ),
     ConstructorOfPol1(Fixed(0.1), (1.0, 2.6)),
-    Fixed(0.5),
     (1.1, 2.5),
     10000,
 )

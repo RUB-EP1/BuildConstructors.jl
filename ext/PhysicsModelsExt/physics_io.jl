@@ -265,6 +265,6 @@ function BuildConstructors.deserialize(::Type{<:ConstructorOfPRBModel}, all_fiel
 
     support = all_fields["support"] |> Tuple
     grid_size = Int(all_fields["grid_size"])
-    ConstructorOfPRBModel(model_p, model_r, model_b, description_of_fs, support, grid_size),
+    ConstructorOfPRBModel(description_of_fs, model_p, model_r, model_b, support, grid_size),
     appendix
 end

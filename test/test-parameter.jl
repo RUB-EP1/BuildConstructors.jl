@@ -3,10 +3,10 @@ using ComponentArrays
 using Test
 
 constructor = ConstructorOfPRBModel(
+    AdvancedParameter("fs", 0.5; boundaries = (0.0, 1.0), uncertainty = 0.01),
     ConstructorOfBW(FlexibleParameter("m", 2.0), FlexibleParameter("Γ", 0.2), (1.0, 2.5)),
     ConstructorOfGaussian(Fixed(0.0), Running("σ"), (-0.5, 0.5)),
     ConstructorOfPol1(FlexibleParameter("c1", 0.3), (1.0, 2.5)),
-    AdvancedParameter("fs", 0.5; boundaries = (0.0, 1.0), uncertainty = 0.01),
     (1.0, 2.5),
     10000,
 )
@@ -55,7 +55,7 @@ end
     @test parameter_values(constructor.model_p) == (m = 2.0, Γ = 0.2)
     update!(constructor.model_p, (m = 1.9, Γ = 0.1))
     @test parameter_values(constructor.model_p) == (m = 1.9, Γ = 0.1)
-    @test parameter_values(constructor) |> keys == (:m, :Γ, :σ, :c1, :fs)
+    @test parameter_values(constructor) |> keys == (:fs, :m, :Γ, :σ, :c1)
     update!(constructor.model_p, (m = 2.0, Γ = 0.2))
 end
 
@@ -74,19 +74,19 @@ end
     @test parameter_names(Running("x")) == (:x,)
     @test running_names(Running("x")) == (:x,)
     @test fixed_names(Running("x")) == ()
-    @test parameter_names(constructor) == (:m, :Γ, :σ, :c1, :fs)
-    @test running_names(constructor) == (:m, :Γ, :σ, :c1, :fs)
+    @test parameter_names(constructor) == (:fs, :m, :Γ, :σ, :c1)
+    @test running_names(constructor) == (:fs, :m, :Γ, :σ, :c1)
     @test fixed_names(constructor) == ()
 
     fix!(constructor, (:m, :c1, :fs))
-    @test isequal(parameter_values(constructor), (m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3, fs = 0.5))
+    @test isequal(parameter_values(constructor), (fs = 0.5, m = 2.0, Γ = 0.2, σ = missing, c1 = 0.3))
     @test running_names(constructor) == (:Γ, :σ)
-    @test fixed_names(constructor) == (:m, :c1, :fs)
+    @test fixed_names(constructor) == (:fs, :m, :c1)
     @test isequal(NamedTuple{running_names(constructor)}(parameter_values(constructor)), (Γ = 0.2, σ = missing))
-    @test isequal(NamedTuple{fixed_names(constructor)}(parameter_values(constructor)), (m = 2.0, c1 = 0.3, fs = 0.5))
+    @test isequal(NamedTuple{fixed_names(constructor)}(parameter_values(constructor)), (fs = 0.5, m = 2.0, c1 = 0.3))
 
     release!(constructor, (:m, :fs))
-    @test running_names(constructor) == (:m, :Γ, :σ, :fs)
+    @test running_names(constructor) == (:fs, :m, :Γ, :σ)
     @test fixed_names(constructor) == (:c1,)
 end
 
@@ -95,22 +95,22 @@ end
     metadata = parameter_metadata(constructor)
 
     @test length(metadata) == 5
-    @test collect(getproperty.(metadata, :name)) == [:m, :Γ, :σ, :c1, :fs]
+    @test collect(getproperty.(metadata, :name)) == [:fs, :m, :Γ, :σ, :c1]
     @test collect(getproperty.(metadata, :parameter_type)) == [
+        AdvancedParameter,
         FlexibleParameter,
         FlexibleParameter,
         Running,
         FlexibleParameter,
-        AdvancedParameter,
     ]
-    @test parameter_names(metadata) == (:m, :Γ, :σ, :c1, :fs)
+    @test parameter_names(metadata) == (:fs, :m, :Γ, :σ, :c1)
     @test isequal(parameter_values(metadata), parameter_values(constructor))
     @test !any(==(Any), fieldtypes(typeof(parameter_values(metadata))))
 
     fix!(constructor, (:m, :fs))
     metadata = parameter_metadata(constructor)
     @test running_names(metadata) == (:Γ, :σ, :c1)
-    @test fixed_names(metadata) == (:m, :fs)
+    @test fixed_names(metadata) == (:fs, :m)
     @test isequal(running_values(metadata), running_values(constructor))
     @test isequal(fixed_values(metadata), fixed_values(constructor))
 end
@@ -120,16 +120,16 @@ end
     fix!(constructor, (:m, :c1, :fs))
 
     @test isequal(running_values(constructor), (Γ = 0.2, σ = missing))
-    @test isequal(fixed_values(constructor), (m = 2.0, c1 = 0.3, fs = 0.5))
+    @test isequal(fixed_values(constructor), (fs = 0.5, m = 2.0, c1 = 0.3))
 
     @test isequal(running_uncertainties(constructor), (Γ = missing, σ = missing))
-    @test isequal(fixed_uncertainties(constructor), (m = missing, c1 = missing, fs = 0.01))
+    @test isequal(fixed_uncertainties(constructor), (fs = 0.01, m = missing, c1 = missing))
 
     @test running_upper_boundaries(constructor) == (Γ = Inf, σ = Inf)
-    @test fixed_upper_boundaries(constructor) == (m = Inf, c1 = Inf, fs = 1.0)
+    @test fixed_upper_boundaries(constructor) == (fs = 1.0, m = Inf, c1 = Inf)
 
     @test running_lower_boundaries(constructor) == (Γ = -Inf, σ = -Inf)
-    @test fixed_lower_boundaries(constructor) == (m = -Inf, c1 = -Inf, fs = 0.0)
+    @test fixed_lower_boundaries(constructor) == (fs = 0.0, m = -Inf, c1 = -Inf)
 end
 
 @testset "shared parameter names do not break filtered collectors" begin
@@ -178,10 +178,9 @@ end
     @test parameter_uncertainties(f) == NamedTuple()
 
     # Test on constructor - should collect from all fields
-    # The constructor has: FlexibleParameter("m"), FlexibleParameter("Γ"), Fixed(0.0), Running("σ"), FlexibleParameter("c1"), FlexibleParameter("fs")
-    # Only Running("σ") should contribute
+    # The constructor has: AdvancedParameter("fs"), FlexibleParameter("m"), FlexibleParameter("Γ"), Running("σ"), FlexibleParameter("c1")
     @test parameter_uncertainties(constructor) ===
-          (m = missing, Γ = missing, σ = missing, c1 = missing, fs = 0.01)
+          (fs = 0.01, m = missing, Γ = missing, σ = missing, c1 = missing)
     @test keys(parameter_uncertainties(constructor)) == parameter_names(constructor)
 end
 
@@ -199,8 +198,7 @@ end
     @test parameter_upper_boundaries(f) == NamedTuple()
 
     # Test on constructor - should collect from all fields
-    # The constructor has: FlexibleParameter("m"), FlexibleParameter("Γ"), Fixed(0.0), Running("σ"), FlexibleParameter("c1"), FlexibleParameter("fs")
-    # All FlexibleParameters and Running should contribute with Inf
+    # The constructor has: AdvancedParameter("fs"), FlexibleParameter("m"), FlexibleParameter("Γ"), Running("σ"), FlexibleParameter("c1")
     upper_bounds = parameter_upper_boundaries(constructor)
     @test keys(upper_bounds) == keys(parameter_values(constructor))
     @test upper_bounds.m == Inf
@@ -208,7 +206,7 @@ end
     @test upper_bounds.σ == Inf
     @test upper_bounds.c1 == Inf
     @test upper_bounds.fs == 1.0
-    @test keys(upper_bounds) == (:m, :Γ, :σ, :c1, :fs)
+    @test keys(upper_bounds) == (:fs, :m, :Γ, :σ, :c1)
 
     p_default = AdvancedParameter("advanced", 1.0)
     @test parameter_upper_boundaries(p_default) == (advanced = Inf,)
@@ -237,7 +235,7 @@ end
     @test lower_bounds.σ == -Inf
     @test lower_bounds.c1 == -Inf
     @test lower_bounds.fs == 0.0
-    @test keys(lower_bounds) == (:m, :Γ, :σ, :c1, :fs)
+    @test keys(lower_bounds) == (:fs, :m, :Γ, :σ, :c1)
 
     p_default = AdvancedParameter("advanced", 1.0)
     @test parameter_lower_boundaries(p_default) == (advanced = -Inf,)
