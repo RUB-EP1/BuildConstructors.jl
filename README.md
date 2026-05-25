@@ -229,9 +229,8 @@ is a parameter descriptor, so the generated constructor is called as:
 c = ConstructorOfScaled(child_constructor, Running("scale"))
 ```
 
-The generated field order is stable: plain parametric fields first, parameter
-descriptor fields second, and typed constant fields last. That means a mixed
-declaration such as:
+The generated struct fields and constructor positional arguments follow the same
+order as the field list in the macro header. For example:
 
 ```julia
 @with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, begin
@@ -246,7 +245,7 @@ ConstructorOfWindowed(model, μ_descriptor, support)
 ```
 
 Use the macro when that generated shape is clear and useful. Write the constructor
-and `build_model` by hand when you need a custom field order, extra validation,
+and `build_model` by hand when you need extra validation,
 special constructors, or a more explicit API.
 
 ## Serialization

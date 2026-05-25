@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- `@with_parameters`: generated struct fields and constructor positional arguments now follow macro header declaration order instead of reordering by field kind (parametric, descriptor, constant).
+
+### Breaking
+
+- `@with_parameters`: constructor positional argument order now matches the macro field list. Code that relied on the previous reordering (for example `ConstructorOfPRBModel(model_p, model_r, model_b, fs, ...)`) must pass arguments in declaration order (`ConstructorOfPRBModel(fs, model_p, model_r, model_b, ...)`). Fixes #39.
+
 ## 0.6.0
 
 ### Added

@@ -105,29 +105,21 @@ function add_struct_field!(struct_fields, field::ConstantField, _)
     return nothing  # unused index slot for ConstantField
 end
 
-# Helper: Generate struct fields in reordered format: parametric first, then parameters, then constants
+# Helper: Generate struct fields in macro header declaration order
 function generate_struct_fields(ordered_fields)
     struct_fields = Expr(:block)
 
-    # Track indices for type parameters
     param_idx = 1
     parametric_idx = 1
 
-    # Parametric fields (declaration order)
     for field in ordered_fields
-        field isa ParametricField &&
-            (parametric_idx = add_struct_field!(struct_fields, field, parametric_idx))
-    end
-
-    # Descriptor fields (`::P`)
-    for field in ordered_fields
-        field isa DescriptorField &&
-            (param_idx = add_struct_field!(struct_fields, field, param_idx))
-    end
-
-    # Typed constant fields
-    for field in ordered_fields
-        field isa ConstantField && add_struct_field!(struct_fields, field, nothing)
+        if field isa ParametricField
+            parametric_idx = add_struct_field!(struct_fields, field, parametric_idx)
+        elseif field isa DescriptorField
+            param_idx = add_struct_field!(struct_fields, field, param_idx)
+        elseif field isa ConstantField
+            add_struct_field!(struct_fields, field, nothing)
+        end
     end
 
     return struct_fields
@@ -312,9 +304,8 @@ The macro separates fields into three roles:
   inferred type parameter. This is useful for nested constructors or arbitrary
   user objects. Inside `body`, use bare `field`.
 
-The generated constructor argument order is parametric fields first, parameter
-descriptor fields second, and constant fields last. This keeps all generated
-constructors predictable even when fields are declared in a mixed order.
+The generated struct fields and constructor positional arguments follow the same
+order as the field list in the macro header.
 
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
