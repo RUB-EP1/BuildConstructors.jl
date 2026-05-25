@@ -106,10 +106,12 @@ extended_negative_log_likelihood(full_model_constructor, pars, data2d)
 #
 # `ExtendedMixtureModel` is callable: `model(x)` returns the extended density,
 # whose integral over the support is the total expected yield. The 2D heatmap
-# and the two one-dimensional projections below are diagnostic views of the
-# starting model, not fitted results.
+# shows the starting model in 2D; `histogram2d` displays the data in the same
+# plane. The one-dimensional histograms compare each marginal to the model
+# projection.
 
 gr()
+theme(:boxed)
 
 mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length = 160))
 density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
@@ -121,7 +123,7 @@ projection_2 = marginal_2.(mass_grid)
 
 bin_scale = (KK_LIMITS[2] - KK_LIMITS[1]) / 60
 
-p_heatmap = heatmap(
+p_model = heatmap(
     mass_grid,
     mass_grid,
     density_grid;
@@ -129,60 +131,51 @@ p_heatmap = heatmap(
     ylabel = "m(K⁺K⁻)₂ [GeV]",
     title = "Starting 2D extended model",
     colorbar_title = "extended density",
+    color = :viridis,
 )
-scatter!(
-    p_heatmap,
+
+p_data = histogram2d(
     fit_df.mKK1,
     fit_df.mKK2;
-    markercolor = :white,
-    markeralpha = 0.35,
-    markersize = 1,
-    label = "",
+    bins = (60, 60),
+    xlabel = "m(K⁺K⁻)₁ [GeV]",
+    ylabel = "m(K⁺K⁻)₂ [GeV]",
+    title = "Data",
+    color = :blues,
 )
 
 p_m1 = histogram(
     fit_df.mKK1;
     bins = 60,
-    label = "",
     fillcolor = :steelblue,
-    fillalpha = 0.35,
-    linecolor = nothing,
+    fillalpha = 0.45,
+    linecolor = :steelblue,
+    linewidth = 0.5,
     xlabel = "m(K⁺K⁻)₁ [GeV]",
     ylabel = "events / bin",
+    title = "m(K⁺K⁻)₁ projection",
 )
-plot!(
-    p_m1,
-    mass_grid,
-    projection_1 .* bin_scale;
-    linewidth = 2,
-    color = :black,
-    label = "",
-)
+plot!(p_m1, mass_grid, projection_1 .* bin_scale; color = :black)
 
 p_m2 = histogram(
     fit_df.mKK2;
     bins = 60,
-    label = "",
     fillcolor = :darkorange,
-    fillalpha = 0.35,
-    linecolor = nothing,
+    fillalpha = 0.45,
+    linecolor = :darkorange,
+    linewidth = 0.5,
     xlabel = "m(K⁺K⁻)₂ [GeV]",
     ylabel = "events / bin",
+    title = "m(K⁺K⁻)₂ projection",
 )
-plot!(
-    p_m2,
-    mass_grid,
-    projection_2 .* bin_scale;
-    linewidth = 2,
-    color = :black,
-    label = "",
-)
+plot!(p_m2, mass_grid, projection_2 .* bin_scale; color = :black)
 
 plot(
-    p_heatmap,
+    p_model,
+    p_data,
     p_m1,
     p_m2;
-    layout = (3, 1),
+    layout = (2, 2),
     size = (900, 760),
     link = :none,
 )
