@@ -24,6 +24,8 @@ bc_docs_doctest_only = get(ENV, "BC_DOCS_DOCTEST_ONLY", "false") == "true"
 bc_docs_doctest_only && doctest(BuildConstructors)
 
 !bc_docs_doctest_only && begin
+    include(joinpath(@__DIR__, "generate_literate.jl"))
+
     makedocs(;
         modules=[BuildConstructors],
         authors="Robert Hentges <robert.hentges@cern.ch> and Mikhail Mikhasenko <mikhail.mikhasenko@cern.ch>",
@@ -41,6 +43,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
                 "Nested Constructors" => "tutorials/nested-constructors.md",
                 "Optim with ComponentArrays" => "tutorials/optim-componentarrays.md",
                 "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
+                "2D Model Construction" => "tutorials/2d-model-construction.md",
             ],
         ],
         checkdocs=:exports,
