@@ -55,6 +55,8 @@ jobs:
         run: julia --color=yes --project=docs docs/make.jl
         env:
           BC_DOCS_DOCTEST_ONLY: "true"
+      - name: Generate Literate pages
+        run: julia --color=yes --project=docs docs/generate_literate.jl
       - name: Build and deploy
         run: julia --color=yes --project=docs docs/make.jl
         env:

@@ -1,7 +1,6 @@
 using BuildConstructors
 using Documenter
 using Documenter: DocMeta, doctest
-using Literate
 
 const GITHUB_REPO = "https://github.com/RUB-EP1/BuildConstructors.jl"
 
@@ -25,13 +24,7 @@ bc_docs_doctest_only = get(ENV, "BC_DOCS_DOCTEST_ONLY", "false") == "true"
 bc_docs_doctest_only && doctest(BuildConstructors)
 
 !bc_docs_doctest_only && begin
-    Literate.markdown(
-        joinpath(@__DIR__, "literate", "tutorials", "2d-model-construction.jl"),
-        joinpath(@__DIR__, "src", "tutorials");
-        documenter=false,
-        execute=false,
-        credit=false,
-    )
+    include(joinpath(@__DIR__, "generate_literate.jl"))
 
     makedocs(;
         modules=[BuildConstructors],
