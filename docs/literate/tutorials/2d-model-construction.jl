@@ -268,9 +268,10 @@ let
         density_grid;
         xlabel="m(K⁺K⁻)₁ [GeV]",
         ylabel="m(K⁺K⁻)₂ [GeV]",
-        title="Starting 2D extended model",
+        title="Model",
         colorbar_title="extended density",
         color=:viridis,
+        colorbar=false,
         sp=1,
     )
 
@@ -281,6 +282,7 @@ let
         xlabel="m(K⁺K⁻)₁ [GeV]",
         ylabel="m(K⁺K⁻)₂ [GeV]",
         title="Data",
+        colorbar=false,
         color=:blues,
         sp=2,
     )
@@ -290,9 +292,7 @@ let
         c=:lightgreen, lc=:green,
         xlabel="m(K⁺K⁻)₁ [GeV]",
         ylabel="count",
-        title="Data projection",
-        sp=3,
-        seriestype=:barbins
+        sp=3
     )
     plot!(mass_grid, projection_1 .* bin_size; color=:black, lw=2, sp=3)
 
@@ -300,9 +300,7 @@ let
     plot!(h; c=:lightblue, lc=:blue,
         xlabel="m(K⁺K⁻)₂ [GeV]",
         ylabel="count",
-        title="m(K⁺K⁻)₂ projection",
-        sp=4,
-        seriestype=:stepbins
+        sp=4
     )
     plot!(mass_grid, projection_2 .* bin_size; color=:black, lw=2, sp=4)
 end
