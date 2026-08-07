@@ -5,6 +5,10 @@ using BuildConstructors
     x -> slope * x + intercept
 end)
 
+@with_parameters(YieldComponent; n::P, begin n end)
+
+@with_parameters(FullModel; component, n::P, begin (component, n) end)
+
 struct UncheckedCore{
     A<:BuildConstructors.AbstractParameter,
     B<:BuildConstructors.AbstractParameter,
@@ -93,6 +97,19 @@ end
     )
     @test parameter_values(unchecked) == (shared = 2.0,)
     @test_throws ArgumentError validate_parameters(unchecked)
+
+    shared_nested = @test_logs (:warn, r"Shared parameters detected") begin
+        ConstructorOfFullModel(
+            ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
+            FlexibleParameter("n", 100.0),
+        )
+    end
+    @test parameter_values(shared_nested) == (n = 100.0,)
+
+    @test_throws ArgumentError ConstructorOfFullModel(
+        ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
+        FlexibleParameter("n", 200.0),
+    )
 
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int
