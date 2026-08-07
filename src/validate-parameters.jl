@@ -64,7 +64,7 @@ function validate_parameters(c::AbstractConstructor)
     if !isempty(shared_paths)
         shared = join(
             (
-                "$(repr(name)) at $(join([join(string.(path), ".") for path in paths], ", "))" for
+                "parameter $(repr(string(name))) at $(join([join(string.(path), ".") for path in paths], ", "))" for
                 (name, paths) in shared_paths
             ),
             "; ",

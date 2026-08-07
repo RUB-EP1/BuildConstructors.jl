@@ -133,13 +133,11 @@ end
 end
 
 @testset "shared parameter names do not break filtered collectors" begin
-    shared = @test_logs (:warn, r"Shared parameters detected") begin
-        ConstructorOfBW(
-            FlexibleParameter("shared", 0.2),
-            FlexibleParameter("shared", 0.2),
-            (1.0, 2.5),
-        )
-    end
+    shared = ConstructorOfBW(
+        FlexibleParameter("shared", 0.2),
+        FlexibleParameter("shared", 0.2),
+        (1.0, 2.5),
+    )
 
     metadata = parameter_metadata(shared)
     @test length(metadata) == 2

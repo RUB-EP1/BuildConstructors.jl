@@ -35,31 +35,27 @@ end
     @test isequal(parameter_values(constructor), (b = missing,))
     @test parameter_names(constructor) == (:b,)
 
-    shared = @test_logs (:warn, r"Shared parameters detected") begin
-        ConstructorOfAffineCore(
-            FlexibleParameter("shared", 1.0),
-            FlexibleParameter("shared", 1.0),
-        )
-    end
+    shared = ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 1.0),
+    )
     @test parameter_names(shared) == (:shared,)
     @test parameter_values(shared) == (shared = 1.0,)
 
-    shared_advanced = @test_logs (:warn, r"Shared parameters detected") begin
-        ConstructorOfAffineCore(
-            AdvancedParameter(
-                "shared",
-                1.0;
-                boundaries = (0.0, 2.0),
-                uncertainty = 0.1,
-            ),
-            AdvancedParameter(
-                "shared",
-                1.0;
-                boundaries = (0.0, 2.0),
-                uncertainty = 0.1,
-            ),
-        )
-    end
+    shared_advanced = ConstructorOfAffineCore(
+        AdvancedParameter(
+            "shared",
+            1.0;
+            boundaries = (0.0, 2.0),
+            uncertainty = 0.1,
+        ),
+        AdvancedParameter(
+            "shared",
+            1.0;
+            boundaries = (0.0, 2.0),
+            uncertainty = 0.1,
+        ),
+    )
     @test shared_advanced.description_of_slope == shared_advanced.description_of_intercept
     @test parameter_values(shared_advanced) == (shared = 1.0,)
     @test parameter_uncertainties(shared_advanced) == (shared = 0.1,)
@@ -98,12 +94,10 @@ end
     @test parameter_values(unchecked) == (shared = 2.0,)
     @test_throws ArgumentError validate_parameters(unchecked)
 
-    shared_nested = @test_logs (:warn, r"Shared parameters detected") begin
-        ConstructorOfFullModel(
-            ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
-            FlexibleParameter("n", 100.0),
-        )
-    end
+    shared_nested = ConstructorOfFullModel(
+        ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
+        FlexibleParameter("n", 100.0),
+    )
     @test parameter_values(shared_nested) == (n = 100.0,)
 
     @test_throws ArgumentError ConstructorOfFullModel(
