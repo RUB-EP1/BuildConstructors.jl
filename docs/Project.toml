@@ -17,7 +17,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
 BuildConstructors = {path = ".."}
-DistributionsHEP = {rev = "codex/extended-mixture-model", url = "https://github.com/JuliaHEP/DistributionsHEP.jl.git"}
+DistributionsHEP = {rev = "codex/marginalize", url = "https://github.com/JuliaHEP/DistributionsHEP.jl.git"}
 Minuit2 = {rev = "codex/remove-roofit-core", url = "https://github.com/JuliaHEP/Minuit2.jl"}
 
 [compat]
