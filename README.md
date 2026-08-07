@@ -7,6 +7,12 @@ and discover every parameter in one place.
 The final object stays domain-native: a `Normal`, a PDF, an amplitude, a callable.
 The constructor holds the fit bookkeeping.
 
+## Installation
+
+```julia
+] add https://github.com/RUB-EP1/BuildConstructors.jl
+```
+
 ## The problem
 
 Fitting workflows need more than numbers. Optimizers want bounds and starting
@@ -50,6 +56,16 @@ Field roles in the macro header:
 | `field` | Nested constructor or other slot; use bare `field` in the body. |
 
 Positional constructor arguments follow the same order as the field list.
+
+`@with_parameters` is optional convenience: it expands to a `ConstructorOf…` struct
+and a `build_model` method you could write explicitly — just with more boilerplate.
+Use `@macroexpand` to inspect the generated code:
+
+```julia
+@macroexpand @with_parameters(Gauss; μ::P, σ::P, begin
+    Normal(μ, σ)
+end)
+```
 
 ### 2. Build a constructor — the object your optimizer sees
 
@@ -108,13 +124,6 @@ The same pattern applies to any return type: wrap `build_model` in your own
 `extended_negative_log_likelihood(constructor, pars, data)` or
 `amplitude(constructor, pars, x)` helpers.
 
-## Installation
-
-```julia
-using Pkg
-Pkg.add("BuildConstructors")
-```
-
 ## Parameter descriptors
 
 | Descriptor | Role |
@@ -149,21 +158,6 @@ When names repeat, metadata keeps every entry; projected collectors such as
 `parameter_values` deduplicate by name (last wins). Macro-generated constructors
 validate the tree at construction time; manual types can call `validate_parameters`
 after `new`.
-
-## `@with_parameters` details
-
-For `field::P`, the generated struct stores `description_of_field`. During
-`build_model`, the macro inserts:
-
-```julia
-field = BuildConstructors.value(c.description_of_field; pars)
-```
-
-For parametric and typed fields, the macro binds `field = c.field` before the
-body. Forward `pars` unchanged to nested `build_model(child, pars)` calls.
-
-Hand-written constructors are fine when you need a custom API — subtype
-`AbstractConstructor` and implement `build_model(c, pars)`.
 
 ## Serialization (optional)
 
