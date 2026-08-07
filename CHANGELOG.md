@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Relax `DistributionsHEP` compat from `0.6` only to `0.5, 0.6`, avoiding resolver conflicts with packages such as `HighEnergyTools`. Fixes #45.
 - `@with_parameters`: generated struct fields and constructor positional arguments now follow macro header declaration order instead of reordering by field kind (parametric, descriptor, constant).
 - `@with_parameters`: struct type parameters (`P*`, `T*`) now follow the same declaration order as fields and constructor arguments, instead of grouping all `P*` before all `T*`.
 - Duplicate parameter names are validated when a constructor is created, not when metadata collectors such as `parameter_values` are called.

@@ -18,7 +18,7 @@ PhysicsModelsExt = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistr
 [compat]
 ComponentArrays = ">=0.15"
 Distributions = ">=0.25"
-DistributionsHEP = "0.6"
+DistributionsHEP = "0.5, 0.6"
 JSON = ">=0.21.4"
 NumericalDistributions = ">=0.5.3"
 OrderedCollections = "1.8.1"
