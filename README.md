@@ -296,16 +296,17 @@ you want constructors such as `ConstructorOfBW`, `ConstructorOfGaussian`, or
 using Pkg
 Pkg.add([
     "Distributions",
-    "DistributionsHEP",
     "JSON",
     "NumericalDistributions",
+    "Polynomials",
+    "SpecialFunctions",
 ])
 ```
 
 Then load the extension dependencies before using the physics helpers:
 
 ```julia
-using Distributions, DistributionsHEP, JSON, NumericalDistributions
+using Distributions, JSON, NumericalDistributions, Polynomials, SpecialFunctions
 using BuildConstructors
 
 Phys = BuildConstructors.physics_models_extension()

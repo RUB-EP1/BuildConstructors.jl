@@ -9,9 +9,10 @@ DocMeta.setdocmeta!(
     :DocTestSetup,
     quote
         using Distributions
-        using DistributionsHEP
         using JSON
         using NumericalDistributions
+        using Polynomials
+        using SpecialFunctions
         using BuildConstructors
         Ext = physics_models_extension()
         Ext === nothing &&

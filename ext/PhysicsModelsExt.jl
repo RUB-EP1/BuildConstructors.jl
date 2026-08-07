@@ -2,10 +2,13 @@ module PhysicsModelsExt
 
 using BuildConstructors
 using Distributions
-using DistributionsHEP
 using JSON
 using NumericalDistributions
 using OrderedCollections
+
+export CrystalBall
+export Chebyshev
+include("PhysicsModelsExt/hep_distributions.jl")
 
 export ConstructorOfBraaten
 export ConstructorOfCBpSECH
