@@ -44,18 +44,22 @@ truth = MixtureModel([Normal(-1.0, 0.45), Normal(1.2, 0.35)], [0.6, 0.4])
 data = rand(truth, 2_000)
 ```
 
-Prepare the starting point and metadata:
+Prepare the starting point and metadata. The `running_*` collectors keep fixed
+parameters out of the Minuit vector:
 
 ```julia
-start = ComponentArray(parameter_values(constructor))
-lower = ComponentArray(parameter_lower_boundaries(constructor))
-upper = ComponentArray(parameter_upper_boundaries(constructor))
+start = ComponentArray(running_values(constructor))
+lower = ComponentArray(running_lower_boundaries(constructor))
+upper = ComponentArray(running_upper_boundaries(constructor))
 
 errors = ComponentArray(
-    map(v -> coalesce(v, 0.1), parameter_uncertainties(constructor)),
+    map(v -> coalesce(v, 0.1), running_uncertainties(constructor)),
 )
 limits = collect(zip(lower, upper))
 ```
+
+After `fix!(constructor, (:μ_left,))`, rerun the collectors above to rebuild
+`start`, `lower`, `upper`, and `errors` for the smaller free subset.
 
 The `coalesce` call gives Minuit a finite step size even if a descriptor has no
 stored uncertainty and reports `missing`.
