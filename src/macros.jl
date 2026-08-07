@@ -60,78 +60,88 @@ function parse_field(expr)
     end
 end
 
-# Helper: Generate type parameters for struct
-# Returns (param_type_params, parametric_type_params) where:
-# - param_type_params: type parameters for AbstractParameter fields (T1, T2, ...)
-# - parametric_type_params: type parameters for parametric fields (P1, P2, ...)
-function generate_type_parameters(n_params, n_parametric_fields)
-    # Use fully qualified BuildConstructors.AbstractParameter
+storage_name(field::Union{ParametricField,ConstantField}) = field.name
+storage_name(field::DescriptorField) = Symbol("description_of_", field.name)
+
+function constructor_formal(field::ParametricField)
+    return storage_name(field)
+end
+
+function constructor_formal(field::DescriptorField)
+    return Expr(
+        :(::),
+        storage_name(field),
+        Expr(:., :BuildConstructors, QuoteNode(:AbstractParameter)),
+    )
+end
+
+function constructor_formal(field::ConstantField)
+    return Expr(:(::), storage_name(field), field.type_expr)
+end
+
+# One pass over macro fields: struct header, slots, constructor, and `new{...}` types.
+function lower_ordered_fields(ordered_fields)
     abstract_param_ref = Expr(:., :BuildConstructors, QuoteNode(:AbstractParameter))
-
-    # Type parameters for parametric fields: P1, P2, ... (no constraint)
-    parametric_type_params = Any[]
-    for i = 1:n_parametric_fields
-        type_param = Symbol("P", i)
-        push!(parametric_type_params, type_param)
-    end
-
-    # Type parameters for parameter fields: T1<:AbstractParameter, T2<:AbstractParameter, ...
-    param_type_params = Expr[]
-    for i = 1:n_params
-        type_param = Symbol("T", i)
-        push!(param_type_params, Expr(:<:, type_param, abstract_param_ref))
-    end
-
-    return param_type_params, parametric_type_params
-end
-
-# Multiple dispatch: Add struct field definition based on field type.
-# Takes both index counters; each method returns the updated pair.
-function add_struct_field!(struct_fields, field::ParametricField, param_idx, parametric_idx)
-    type_param = Symbol("P", parametric_idx)
-    push!(struct_fields.args, Expr(:(::), field.name, type_param))
-    return param_idx, parametric_idx + 1
-end
-
-function add_struct_field!(struct_fields, field::DescriptorField, param_idx, parametric_idx)
-    type_param = Symbol("T", param_idx)
-    field_name = Symbol("description_of_", field.name)
-    push!(struct_fields.args, Expr(:(::), field_name, type_param))
-    return param_idx + 1, parametric_idx
-end
-
-function add_struct_field!(struct_fields, field::ConstantField, param_idx, parametric_idx)
-    push!(struct_fields.args, Expr(:(::), field.name, field.type_expr))
-    return param_idx, parametric_idx
-end
-
-# Helper: Generate struct fields in macro header declaration order
-function generate_struct_fields(ordered_fields)
-    struct_fields = Expr(:block)
+    struct_field_exprs = Expr[]
+    argument_names = Symbol[]
+    arguments = Any[]
+    type_params = Any[]
+    type_argument_names = Symbol[]
 
     param_idx = 1
     parametric_idx = 1
 
     for field in ordered_fields
-        param_idx, parametric_idx =
-            add_struct_field!(struct_fields, field, param_idx, parametric_idx)
+        field_type = if field isa ParametricField
+            Symbol("P", parametric_idx)
+        elseif field isa DescriptorField
+            Symbol("T", param_idx)
+        else
+            field.type_expr
+        end
+
+        push!(struct_field_exprs, Expr(:(::), storage_name(field), field_type))
+        push!(argument_names, storage_name(field))
+        push!(arguments, constructor_formal(field))
+
+        if field isa ParametricField
+            push!(type_params, field_type)
+            push!(type_argument_names, storage_name(field))
+            parametric_idx += 1
+        elseif field isa DescriptorField
+            push!(type_params, Expr(:<:, field_type, abstract_param_ref))
+            push!(type_argument_names, storage_name(field))
+            param_idx += 1
+        end
     end
 
-    return struct_fields
+    return struct_field_exprs, argument_names, arguments, type_params, type_argument_names
 end
 
-# Helper: Generate struct definition
-function generate_struct_definition(
-    constructor_name,
-    param_type_params,
-    parametric_type_params,
-    struct_fields,
-)
-    # Use fully qualified BuildConstructors.AbstractConstructor
+function generate_struct_definition(constructor_name, ordered_fields)
+    struct_field_exprs, argument_names, arguments, type_params, type_argument_names =
+        lower_ordered_fields(ordered_fields)
+
+    type_arguments = [
+        Expr(:call, :typeof, argument) for argument in type_argument_names
+    ]
+    new_ref = isempty(type_arguments) ? :new : Expr(:curly, :new, type_arguments...)
+    new_call = Expr(:call, new_ref, argument_names...)
+    constructor = gensym(:constructor)
+    validate_ref = Expr(:., :BuildConstructors, QuoteNode(:validate_parameters))
+    inner_constructor = Expr(
+        :function,
+        Expr(:call, constructor_name, arguments...),
+        Expr(
+            :block,
+            Expr(:(=), constructor, new_call),
+            Expr(:return, Expr(:call, validate_ref, constructor)),
+        ),
+    )
+
     abstract_constructor_ref = Expr(:., :BuildConstructors, QuoteNode(:AbstractConstructor))
-    # Combine all type parameters: P1, P2, ..., T1, T2, ... (parametric first, then parameters)
-    all_type_params = vcat(parametric_type_params, param_type_params)
-    struct_name_with_params = Expr(:curly, constructor_name, all_type_params...)
+    struct_name_with_params = Expr(:curly, constructor_name, type_params...)
+    struct_fields = Expr(:block, struct_field_exprs..., inner_constructor)
     return Expr(
         :struct,
         false,
@@ -142,7 +152,6 @@ end
 
 # Multiple dispatch: Extract parameter value for DescriptorField (`::P`)
 function extract_parameter!(param_extractions, field::DescriptorField, value_ref, c_inst)
-    field_name = Symbol("description_of_", field.name)
     push!(
         param_extractions.args,
         Expr(
@@ -152,7 +161,7 @@ function extract_parameter!(param_extractions, field::DescriptorField, value_ref
                 :call,
                 value_ref,
                 Expr(:parameters, :pars),
-                Expr(:., c_inst, QuoteNode(field_name)),
+                Expr(:., c_inst, QuoteNode(storage_name(field))),
             ),
         ),
     )
@@ -165,15 +174,11 @@ extract_parameter!(::Any, ::ConstantField, ::Any, ::Any) = nothing
 function add_slot_bindings!(bindings_block, field::Union{ParametricField, ConstantField}, c_inst)
     push!(
         bindings_block.args,
-        Expr(:(=), field.name, Expr(:., c_inst, QuoteNode(field.name))),
+        Expr(:(=), field.name, Expr(:., c_inst, QuoteNode(storage_name(field)))),
     )
     return nothing
 end
 add_slot_bindings!(::Any, ::DescriptorField, ::Any) = nothing
-
-# Multiple dispatch: Count fields by type
-count_descriptor_fields(fields) = count(f -> f isa DescriptorField, fields)
-count_parametric_fields(fields) = count(f -> f isa ParametricField, fields)
 
 # Helper: Generate build_model function
 function generate_build_model_function(constructor_name, ordered_fields, body)
@@ -302,6 +307,11 @@ The macro separates fields into three roles:
 The generated struct fields and constructor positional arguments follow the same
 order as the field list in the macro header.
 
+Generated constructors always call `validate_parameters` after all fields are
+initialized. Repeated parameter names whose descriptors compare equal with `==`
+emit a shared-parameter warning; unequal descriptors throw an `ArgumentError`
+before the constructor is returned.
+
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
 constant slots are copied from fields of the constructor instance.
@@ -334,21 +344,9 @@ macro with_parameters(model_name_expr, params_expr...)
     model_name, ordered_fields, body =
         parse_macro_arguments(model_name_expr, params_expr...)
 
-    n_descriptor = count_descriptor_fields(ordered_fields)
-    n_parametric = count_parametric_fields(ordered_fields)
-
     # Generate code
     constructor_name = Symbol("ConstructorOf", model_name)
-
-    param_type_params, parametric_type_params =
-        generate_type_parameters(n_descriptor, n_parametric)
-    struct_fields = generate_struct_fields(ordered_fields)
-    struct_def = generate_struct_definition(
-        constructor_name,
-        param_type_params,
-        parametric_type_params,
-        struct_fields,
-    )
+    struct_def = generate_struct_definition(constructor_name, ordered_fields)
     build_model_def =
         generate_build_model_function(constructor_name, ordered_fields, body)
 

@@ -5,6 +5,18 @@ using BuildConstructors
     x -> slope * x + intercept
 end)
 
+@with_parameters(YieldComponent; n::P, begin n end)
+
+@with_parameters(FullModel; component, n::P, begin (component, n) end)
+
+struct UncheckedCore{
+    A<:BuildConstructors.AbstractParameter,
+    B<:BuildConstructors.AbstractParameter,
+} <: BuildConstructors.AbstractConstructor
+    first::A
+    second::B
+end
+
 @testset "Core functionality without weak dependencies" begin
     @test BuildConstructors.physics_models_extension() === nothing
 
@@ -22,6 +34,76 @@ end)
     @test model(3.0) == 7.5
     @test isequal(parameter_values(constructor), (b = missing,))
     @test parameter_names(constructor) == (:b,)
+
+    shared = ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 1.0),
+    )
+    @test parameter_names(shared) == (:shared,)
+    @test parameter_values(shared) == (shared = 1.0,)
+
+    shared_advanced = ConstructorOfAffineCore(
+        AdvancedParameter(
+            "shared",
+            1.0;
+            boundaries = (0.0, 2.0),
+            uncertainty = 0.1,
+        ),
+        AdvancedParameter(
+            "shared",
+            1.0;
+            boundaries = (0.0, 2.0),
+            uncertainty = 0.1,
+        ),
+    )
+    @test shared_advanced.description_of_slope == shared_advanced.description_of_intercept
+    @test parameter_values(shared_advanced) == (shared = 1.0,)
+    @test parameter_uncertainties(shared_advanced) == (shared = 0.1,)
+    @test parameter_lower_boundaries(shared_advanced) == (shared = 0.0,)
+    @test parameter_upper_boundaries(shared_advanced) == (shared = 2.0,)
+
+    @test_throws ArgumentError ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 2.0),
+    )
+
+    @test_throws ArgumentError ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        AdvancedParameter("shared", 1.0),
+    )
+
+    @test_throws ArgumentError ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 3.0), uncertainty = 0.1),
+    )
+
+    @test_throws ArgumentError ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.2),
+    )
+
+    @test_throws ArgumentError ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, true),
+        AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, false),
+    )
+
+    unchecked = UncheckedCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 2.0),
+    )
+    @test parameter_values(unchecked) == (shared = 2.0,)
+    @test_throws ArgumentError validate_parameters(unchecked)
+
+    shared_nested = ConstructorOfFullModel(
+        ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
+        FlexibleParameter("n", 100.0),
+    )
+    @test parameter_values(shared_nested) == (n = 100.0,)
+
+    @test_throws ArgumentError ConstructorOfFullModel(
+        ConstructorOfYieldComponent(FlexibleParameter("n", 100.0)),
+        FlexibleParameter("n", 200.0),
+    )
 
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int

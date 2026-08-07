@@ -174,4 +174,15 @@ end
     @test fieldnames(ConstructorOfScaleMacroConstD) == (:D, :description_of_scale)
 end
 
+@with_parameters(InterleavedOrder; fs::P, inner, begin (fs, inner) end)
+
+@testset "type parameters follow declaration order" begin
+    child = Fixed(2.0)
+    descriptor = FlexibleParameter("fs", 1.0)
+    constructor = ConstructorOfInterleavedOrder(descriptor, child)
+    type_parameters = typeof(constructor).parameters
+    @test type_parameters[1] === typeof(descriptor)
+    @test type_parameters[2] === typeof(child)
+end
+
 println("All macro tests passed!")

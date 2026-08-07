@@ -76,3 +76,34 @@ release!(constructor, (:σ_left, :σ_right))
 The pattern scales to deeper trees. A parent constructor does not need to know the
 concrete type of each child; it only needs to call `build_model(child, pars)` at
 the point where the final domain object is assembled.
+
+## Shared parameter names
+
+When the same parameter name appears in multiple places of the constructor tree,
+macro-generated constructors validate the full tree at construction time. Equal
+descriptors are treated as an intentional shared parameter and produce a warning:
+
+```julia
+ConstructorOfMixture(
+    ConstructorOfGauss(
+        AdvancedParameter("μ_left", -1.0; boundaries = (-5.0, 5.0), uncertainty = 0.1),
+        AdvancedParameter("σ", 0.8; boundaries = (0.05, 5.0), uncertainty = 0.05),
+    ),
+    ConstructorOfGauss(
+        AdvancedParameter("μ_right", 1.2; boundaries = (-5.0, 5.0), uncertainty = 0.1),
+        AdvancedParameter("σ", 0.8; boundaries = (0.05, 5.0), uncertainty = 0.05),
+    ),
+    AdvancedParameter("f_left", 0.6; boundaries = (0.0, 1.0), uncertainty = 0.02),
+)  # warns: shared `σ`
+```
+
+If the same name appears with incompatible descriptors, construction fails before
+an invalid tree can be used:
+
+```julia
+ConstructorOfMixture(...)  # ArgumentError when child and parent disagree on `σ`
+```
+
+Metadata collectors such as `parameter_values` do not repeat this check. They
+project the tree without validation overhead, so manual constructors should call
+`validate_parameters` after `new` when the same invariant is required.

@@ -11,6 +11,14 @@ collectors when they carry fixed/free state, defaults, bounds, or uncertainties.
 """
 abstract type AbstractParameter end
 
+function Base.:(==)(left::AbstractParameter, right::AbstractParameter)
+    typeof(left) === typeof(right) || return false
+    return all(
+        field -> isequal(getfield(left, field), getfield(right, field)),
+        fieldnames(typeof(left)),
+    )
+end
+
 # Any parameter realization, needs to implement the following functions:
 # by default, these functions do nothing
 
@@ -147,6 +155,9 @@ end
     parameter_values(constructor)
 
 Get the stored values of all named parameters as a `NamedTuple`.
+
+Repeated names are returned once. Use `validate_parameters` when constructing a
+model to verify that shared parameter descriptors agree.
 """
 parameter_values(p) = _metadata_namedtuple(p, :value, :all)
 

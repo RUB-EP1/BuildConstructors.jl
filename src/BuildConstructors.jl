@@ -35,6 +35,9 @@ include("concrete-parameters.jl")
 export build_model
 include("abstract-constructor.jl")
 
+export validate_parameters
+include("validate-parameters.jl")
+
 export @with_parameters
 include("macros.jl")
 
