@@ -19,6 +19,10 @@ constructor = ConstructorOfPRBModel(
     @test getfield(constructor.model_p.description_of_m, :fixed) == false
 end
 
+@testset "AdvancedParameter fixed keyword" begin
+    @test AdvancedParameter("x", 1.0).fixed == false
+    @test AdvancedParameter("x", 1.0; fixed = true).fixed == true
+end
 
 # tests
 @testset "fix and release, one argument" begin
