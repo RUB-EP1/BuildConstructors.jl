@@ -30,6 +30,15 @@ end)
     @test parameter_names(shared) == (:shared,)
     @test parameter_values(shared) == (shared = 1.0,)
 
+    shared_advanced = ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+    )
+    @test parameter_values(shared_advanced) == (shared = 1.0,)
+    @test parameter_uncertainties(shared_advanced) == (shared = 0.1,)
+    @test parameter_lower_boundaries(shared_advanced) == (shared = 0.0,)
+    @test parameter_upper_boundaries(shared_advanced) == (shared = 2.0,)
+
     conflicting = ConstructorOfAffineCore(
         FlexibleParameter("shared", 1.0),
         FlexibleParameter("shared", 2.0),
@@ -37,6 +46,30 @@ end)
     @test length(parameter_metadata(conflicting)) == 2
     @test_throws ArgumentError parameter_values(conflicting)
     @test_throws ArgumentError parameter_names(conflicting)
+
+    conflicting_type = ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        AdvancedParameter("shared", 1.0),
+    )
+    @test_throws ArgumentError parameter_values(conflicting_type)
+
+    conflicting_bounds = ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 3.0), uncertainty = 0.1),
+    )
+    @test_throws ArgumentError parameter_values(conflicting_bounds)
+
+    conflicting_uncertainty = ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
+        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.2),
+    )
+    @test_throws ArgumentError parameter_values(conflicting_uncertainty)
+
+    conflicting_fixed_state = ConstructorOfAffineCore(
+        AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, true),
+        AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, false),
+    )
+    @test_throws ArgumentError parameter_values(conflicting_fixed_state)
 
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int

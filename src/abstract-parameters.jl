@@ -73,8 +73,8 @@ Collect all named parameter descriptors as metadata entries.
 Each entry is a `NamedTuple` with fields:
 `name`, `value`, `uncertainty`, `lower`, `upper`, `fixed`, `parameter`, and
 `parameter_type`. Duplicate names are preserved here so callers can inspect the
-raw constructor tree. Projection helpers deduplicate equal-valued entries by name
-and reject entries whose values conflict.
+raw constructor tree. Projection helpers deduplicate equivalent entries by name
+and reject entries whose parameter specifications conflict.
 """
 parameter_metadata(p::AbstractParameter) = ()
 
@@ -109,24 +109,39 @@ _is_parameter_metadata(metadata::Tuple) = all(_is_parameter_metadata_entry, meta
 
 function _metadata_entries(p)
     metadata = p isa Tuple && _is_parameter_metadata(p) ? p : parameter_metadata(p)
-    return _is_parameter_metadata(metadata) ? _validate_parameter_values(metadata) : ()
+    return _is_parameter_metadata(metadata) ? _validate_parameter_metadata(metadata) : ()
 end
 
-function _validate_parameter_values(metadata)
-    values_by_name = Dict{Symbol,Any}()
+const _SHARED_PARAMETER_METADATA_KEYS =
+    (:value, :uncertainty, :lower, :upper, :fixed, :parameter_type)
+
+function _validate_parameter_metadata(metadata)
+    entries_by_name = Dict{Symbol,Any}()
     for entry in metadata
-        if haskey(values_by_name, entry.name)
-            previous_value = values_by_name[entry.name]
-            isequal(previous_value, entry.value) && continue
+        if haskey(entries_by_name, entry.name)
+            previous_entry = entries_by_name[entry.name]
+            conflicting_keys = filter(
+                key -> !isequal(getproperty(previous_entry, key), getproperty(entry, key)),
+                _SHARED_PARAMETER_METADATA_KEYS,
+            )
+            isempty(conflicting_keys) && continue
+
+            conflicts = join(
+                (
+                    "$(key) ($(repr(getproperty(previous_entry, key))) vs " *
+                    "$(repr(getproperty(entry, key))))" for key in conflicting_keys
+                ),
+                ", ",
+            )
             throw(
                 ArgumentError(
-                    "parameter $(repr(entry.name)) has conflicting values " *
-                    "$(repr(previous_value)) and $(repr(entry.value)); " *
-                    "use the same value for shared parameters or give them distinct names",
+                    "parameter $(repr(entry.name)) has conflicting metadata: $conflicts; " *
+                    "shared parameters must use the same descriptor type, value, " *
+                    "fixed state, bounds, and uncertainty",
                 ),
             )
         end
-        values_by_name[entry.name] = entry.value
+        entries_by_name[entry.name] = entry
     end
     return metadata
 end
@@ -168,8 +183,9 @@ end
 
 Get the stored values of all named parameters as a `NamedTuple`.
 
-Repeated names with equal values represent a shared parameter and are returned
-once. Repeated names with conflicting values throw an `ArgumentError`.
+Repeated names with equivalent metadata represent a shared parameter and are
+returned once. A repeated name whose descriptor type, value, fixed state, bounds,
+or uncertainty differs throws an `ArgumentError`.
 """
 parameter_values(p) = _metadata_namedtuple(p, :value, :all)
 
