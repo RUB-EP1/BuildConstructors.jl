@@ -1,3 +1,4 @@
+using DistributionsHEP  # For Chebyshev
 using JSON
 using Distributions
 using NumericalDistributions

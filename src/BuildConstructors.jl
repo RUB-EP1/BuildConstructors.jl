@@ -45,7 +45,7 @@ include("macros.jl")
     physics_models_extension()
 
 Return the `PhysicsModelsExt` module once its weak dependencies
-(`JSON`, `Distributions`, `NumericalDistributions`, `Polynomials`, `SpecialFunctions`) are loaded
+(`JSON`, `Distributions`, `DistributionsHEP`, `NumericalDistributions`) are loaded
 in the Julia session; otherwise return `nothing`.
 
 Built-in resonance- and resolution-style constructors (`ConstructorOfBW`, etc.)

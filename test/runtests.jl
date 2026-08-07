@@ -121,10 +121,9 @@ end
 # Load weak dependencies so PhysicsModelsExt is activated,
 # then pull extension symbols into Main for the physics tests.
 using Distributions
+using DistributionsHEP
 using JSON
 using NumericalDistributions
-using Polynomials
-using SpecialFunctions
 include("physics_access.jl")
 include("test-macro.jl")
 
