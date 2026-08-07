@@ -100,7 +100,7 @@ The package includes a few ready-to-use descriptors:
 | `Fixed(value)` | A constant value that is not collected as a named parameter. |
 | `Running(name)` | A free parameter read from `pars` by name. |
 | `FlexibleParameter(name, value)` | A parameter with a stored value that can be fixed or released. |
-| `AdvancedParameter(name, value; boundaries, uncertainty)` | A parameter with a stored value, bounds, uncertainty, and fixed/free state. |
+| `AdvancedParameter(name, value; boundaries, uncertainty, fixed)` | A parameter with a stored value, bounds, uncertainty, and fixed/free state. |
 
 The same generic tools work recursively on constructors and nested constructors:
 

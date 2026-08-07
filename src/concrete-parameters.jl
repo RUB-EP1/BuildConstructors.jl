@@ -124,7 +124,7 @@ parameter_metadata(c::FlexibleParameter) =
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # advanced parameter, can be fixed and released, and has boundaries and uncertainty
 """
-    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0)
+    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0, fixed = false)
     AdvancedParameter(name, value, boundaries, uncertainty, fixed)
 
 Mutable parameter descriptor with stored value, bounds, uncertainty, and
@@ -151,12 +151,12 @@ Resolve to the stored value when `p.fixed` is true; otherwise read `p.name` from
 value(p::AdvancedParameter; pars) = p.fixed ? p.value : getproperty(pars, Symbol(p.name))
 
 """
-    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0)
+    AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0, fixed = false)
 
-Create a free `AdvancedParameter` with stored value, bounds, and uncertainty.
+Create an `AdvancedParameter` with stored value, bounds, uncertainty, and fixed/free state.
 """
-AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0) =
-    AdvancedParameter(name, value, boundaries, uncertainty, false)
+AdvancedParameter(name, value; boundaries = (-Inf, Inf), uncertainty = 1.0, fixed = false) =
+    AdvancedParameter(name, value, boundaries, uncertainty, fixed)
 
 """
     fix!(p::AdvancedParameter, par_names)
