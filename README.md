@@ -244,6 +244,23 @@ is constructed as:
 ConstructorOfWindowed(model, μ_descriptor, support)
 ```
 
+Macro-generated constructors validate their parameter trees immediately. Shared
+names whose descriptors compare equal with `==` produce a warning, while unequal
+descriptors throw an error. Manual inner constructors can opt into the same
+invariant after `new`:
+
+```julia
+struct ConstructorOfCustom{L,R} <: AbstractConstructor
+    left::L
+    right::R
+
+    function ConstructorOfCustom(left, right)
+        constructor = new{typeof(left),typeof(right)}(left, right)
+        return validate_parameters(constructor)
+    end
+end
+```
+
 Use the macro when that generated shape is clear and useful. Write the constructor
 and `build_model` by hand when you need extra validation,
 special constructors, or a more explicit API.

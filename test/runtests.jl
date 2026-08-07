@@ -5,6 +5,14 @@ using BuildConstructors
     x -> slope * x + intercept
 end)
 
+struct UncheckedCore{
+    A<:BuildConstructors.AbstractParameter,
+    B<:BuildConstructors.AbstractParameter,
+} <: BuildConstructors.AbstractConstructor
+    first::A
+    second::B
+end
+
 @testset "Core functionality without weak dependencies" begin
     @test BuildConstructors.physics_models_extension() === nothing
 
@@ -23,53 +31,68 @@ end)
     @test isequal(parameter_values(constructor), (b = missing,))
     @test parameter_names(constructor) == (:b,)
 
-    shared = ConstructorOfAffineCore(
-        FlexibleParameter("shared", 1.0),
-        FlexibleParameter("shared", 1.0),
-    )
+    shared = @test_logs (:warn, r"Shared parameters detected") begin
+        ConstructorOfAffineCore(
+            FlexibleParameter("shared", 1.0),
+            FlexibleParameter("shared", 1.0),
+        )
+    end
     @test parameter_names(shared) == (:shared,)
     @test parameter_values(shared) == (shared = 1.0,)
 
-    shared_advanced = ConstructorOfAffineCore(
-        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
-        AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
-    )
+    shared_advanced = @test_logs (:warn, r"Shared parameters detected") begin
+        ConstructorOfAffineCore(
+            AdvancedParameter(
+                "shared",
+                1.0;
+                boundaries = (0.0, 2.0),
+                uncertainty = 0.1,
+            ),
+            AdvancedParameter(
+                "shared",
+                1.0;
+                boundaries = (0.0, 2.0),
+                uncertainty = 0.1,
+            ),
+        )
+    end
+    @test shared_advanced.description_of_slope == shared_advanced.description_of_intercept
     @test parameter_values(shared_advanced) == (shared = 1.0,)
     @test parameter_uncertainties(shared_advanced) == (shared = 0.1,)
     @test parameter_lower_boundaries(shared_advanced) == (shared = 0.0,)
     @test parameter_upper_boundaries(shared_advanced) == (shared = 2.0,)
 
-    conflicting = ConstructorOfAffineCore(
+    @test_throws ArgumentError ConstructorOfAffineCore(
         FlexibleParameter("shared", 1.0),
         FlexibleParameter("shared", 2.0),
     )
-    @test length(parameter_metadata(conflicting)) == 2
-    @test_throws ArgumentError parameter_values(conflicting)
-    @test_throws ArgumentError parameter_names(conflicting)
 
-    conflicting_type = ConstructorOfAffineCore(
+    @test_throws ArgumentError ConstructorOfAffineCore(
         FlexibleParameter("shared", 1.0),
         AdvancedParameter("shared", 1.0),
     )
-    @test_throws ArgumentError parameter_values(conflicting_type)
 
-    conflicting_bounds = ConstructorOfAffineCore(
+    @test_throws ArgumentError ConstructorOfAffineCore(
         AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
         AdvancedParameter("shared", 1.0; boundaries = (0.0, 3.0), uncertainty = 0.1),
     )
-    @test_throws ArgumentError parameter_values(conflicting_bounds)
 
-    conflicting_uncertainty = ConstructorOfAffineCore(
+    @test_throws ArgumentError ConstructorOfAffineCore(
         AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.1),
         AdvancedParameter("shared", 1.0; boundaries = (0.0, 2.0), uncertainty = 0.2),
     )
-    @test_throws ArgumentError parameter_values(conflicting_uncertainty)
 
-    conflicting_fixed_state = ConstructorOfAffineCore(
+    @test_throws ArgumentError ConstructorOfAffineCore(
         AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, true),
         AdvancedParameter("shared", 1.0, (-Inf, Inf), 1.0, false),
     )
-    @test_throws ArgumentError parameter_values(conflicting_fixed_state)
+
+    unchecked = UncheckedCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 2.0),
+    )
+    @test parameter_values(unchecked) == (shared = 2.0,)
+    @test_throws ArgumentError validate_parameters(unchecked)
 
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int

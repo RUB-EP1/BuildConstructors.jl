@@ -133,11 +133,13 @@ end
 end
 
 @testset "shared parameter names do not break filtered collectors" begin
-    shared = ConstructorOfBW(
-        FlexibleParameter("shared", 0.2),
-        FlexibleParameter("shared", 0.2),
-        (1.0, 2.5),
-    )
+    shared = @test_logs (:warn, r"Shared parameters detected") begin
+        ConstructorOfBW(
+            FlexibleParameter("shared", 0.2),
+            FlexibleParameter("shared", 0.2),
+            (1.0, 2.5),
+        )
+    end
 
     metadata = parameter_metadata(shared)
     @test length(metadata) == 2
@@ -154,13 +156,11 @@ end
     @test isequal(running_values(shared), NamedTuple())
     @test isequal(fixed_values(shared), (shared = 0.2,))
 
-    conflicting = ConstructorOfBW(
+    @test_throws ArgumentError ConstructorOfBW(
         FlexibleParameter("shared", 2.0),
         FlexibleParameter("shared", 0.2),
         (1.0, 2.5),
     )
-    @test length(parameter_metadata(conflicting)) == 2
-    @test_throws ArgumentError parameter_values(conflicting)
 end
 
 @testset "Release all, and fix all" begin

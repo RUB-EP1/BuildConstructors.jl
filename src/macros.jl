@@ -120,18 +120,61 @@ function generate_struct_fields(ordered_fields)
     return struct_fields
 end
 
+_constructor_argument_name(field::Union{ParametricField,ConstantField}) =
+    field.name
+_constructor_argument_name(field::DescriptorField) = Symbol("description_of_", field.name)
+
+_constructor_argument(field::ParametricField) = field.name
+_constructor_argument(field::DescriptorField) = Expr(
+    :(::),
+    _constructor_argument_name(field),
+    Expr(:., :BuildConstructors, QuoteNode(:AbstractParameter)),
+)
+_constructor_argument(field::ConstantField) = Expr(:(::), field.name, field.type_expr)
+
+function generate_inner_constructor(constructor_name, ordered_fields)
+    argument_names = _constructor_argument_name.(ordered_fields)
+    arguments = _constructor_argument.(ordered_fields)
+
+    parametric_arguments =
+        _constructor_argument_name.(filter(field -> field isa ParametricField, ordered_fields))
+    descriptor_arguments =
+        _constructor_argument_name.(filter(field -> field isa DescriptorField, ordered_fields))
+    type_arguments = Expr[
+        Expr(:call, :typeof, argument) for
+        argument in vcat(parametric_arguments, descriptor_arguments)
+    ]
+
+    new_ref = isempty(type_arguments) ? :new : Expr(:curly, :new, type_arguments...)
+    new_call = Expr(:call, new_ref, argument_names...)
+    constructor = gensym(:constructor)
+    validate_ref = Expr(:., :BuildConstructors, QuoteNode(:validate_parameters))
+
+    return Expr(
+        :function,
+        Expr(:call, constructor_name, arguments...),
+        Expr(
+            :block,
+            Expr(:(=), constructor, new_call),
+            Expr(:return, Expr(:call, validate_ref, constructor)),
+        ),
+    )
+end
+
 # Helper: Generate struct definition
 function generate_struct_definition(
     constructor_name,
     param_type_params,
     parametric_type_params,
     struct_fields,
+    ordered_fields,
 )
     # Use fully qualified BuildConstructors.AbstractConstructor
     abstract_constructor_ref = Expr(:., :BuildConstructors, QuoteNode(:AbstractConstructor))
     # Combine all type parameters: P1, P2, ..., T1, T2, ... (parametric first, then parameters)
     all_type_params = vcat(parametric_type_params, param_type_params)
     struct_name_with_params = Expr(:curly, constructor_name, all_type_params...)
+    push!(struct_fields.args, generate_inner_constructor(constructor_name, ordered_fields))
     return Expr(
         :struct,
         false,
@@ -302,6 +345,11 @@ The macro separates fields into three roles:
 The generated struct fields and constructor positional arguments follow the same
 order as the field list in the macro header.
 
+Generated constructors always call `validate_parameters` after all fields are
+initialized. Repeated parameter names whose descriptors compare equal with `==`
+emit a shared-parameter warning; unequal descriptors throw an `ArgumentError`
+before the constructor is returned.
+
 Inside `body`, every field name from the header is a local binding: parameter
 descriptors (`::P`) are resolved via `BuildConstructors.value`; parametric and
 constant slots are copied from fields of the constructor instance.
@@ -348,6 +396,7 @@ macro with_parameters(model_name_expr, params_expr...)
         param_type_params,
         parametric_type_params,
         struct_fields,
+        ordered_fields,
     )
     build_model_def =
         generate_build_model_function(constructor_name, ordered_fields, body)

@@ -33,6 +33,7 @@ export AdvancedParameter
 include("concrete-parameters.jl")
 
 export build_model
+export validate_parameters
 include("abstract-constructor.jl")
 
 export @with_parameters
