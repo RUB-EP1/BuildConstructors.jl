@@ -23,6 +23,21 @@ end)
     @test isequal(parameter_values(constructor), (b = missing,))
     @test parameter_names(constructor) == (:b,)
 
+    shared = ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 1.0),
+    )
+    @test parameter_names(shared) == (:shared,)
+    @test parameter_values(shared) == (shared = 1.0,)
+
+    conflicting = ConstructorOfAffineCore(
+        FlexibleParameter("shared", 1.0),
+        FlexibleParameter("shared", 2.0),
+    )
+    @test length(parameter_metadata(conflicting)) == 2
+    @test_throws ArgumentError parameter_values(conflicting)
+    @test_throws ArgumentError parameter_names(conflicting)
+
     @test BuildConstructors._type_from_string("Fixed") === Fixed
     @test BuildConstructors._type_from_string("Int") === Int
     @test_throws ErrorException BuildConstructors._type_from_string("DefinitelyMissingType")

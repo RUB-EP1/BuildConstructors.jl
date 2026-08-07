@@ -73,7 +73,8 @@ Collect all named parameter descriptors as metadata entries.
 Each entry is a `NamedTuple` with fields:
 `name`, `value`, `uncertainty`, `lower`, `upper`, `fixed`, `parameter`, and
 `parameter_type`. Duplicate names are preserved here so callers can inspect the
-raw constructor tree; projection helpers deduplicate by name.
+raw constructor tree. Projection helpers deduplicate equal-valued entries by name
+and reject entries whose values conflict.
 """
 parameter_metadata(p::AbstractParameter) = ()
 
@@ -108,7 +109,26 @@ _is_parameter_metadata(metadata::Tuple) = all(_is_parameter_metadata_entry, meta
 
 function _metadata_entries(p)
     metadata = p isa Tuple && _is_parameter_metadata(p) ? p : parameter_metadata(p)
-    return _is_parameter_metadata(metadata) ? metadata : ()
+    return _is_parameter_metadata(metadata) ? _validate_parameter_values(metadata) : ()
+end
+
+function _validate_parameter_values(metadata)
+    values_by_name = Dict{Symbol,Any}()
+    for entry in metadata
+        if haskey(values_by_name, entry.name)
+            previous_value = values_by_name[entry.name]
+            isequal(previous_value, entry.value) && continue
+            throw(
+                ArgumentError(
+                    "parameter $(repr(entry.name)) has conflicting values " *
+                    "$(repr(previous_value)) and $(repr(entry.value)); " *
+                    "use the same value for shared parameters or give them distinct names",
+                ),
+            )
+        end
+        values_by_name[entry.name] = entry.value
+    end
+    return metadata
 end
 
 function _metadata_names(metadata, state::Symbol)
@@ -147,6 +167,9 @@ end
     parameter_values(constructor)
 
 Get the stored values of all named parameters as a `NamedTuple`.
+
+Repeated names with equal values represent a shared parameter and are returned
+once. Repeated names with conflicting values throw an `ArgumentError`.
 """
 parameter_values(p) = _metadata_namedtuple(p, :value, :all)
 
