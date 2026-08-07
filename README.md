@@ -1,171 +1,29 @@
 # BuildConstructors.jl
 
-`BuildConstructors.jl` is a small pattern for building Julia objects whose numerical
-parameters need extra metadata: defaults, fixed/free state, bounds, uncertainties,
-or names used by a fitting backend.
+Attach metadata to model parameters — names, starting values, bounds, fixed/free
+state — without polluting the model object itself. Walk a nested constructor tree
+and discover every parameter in one place.
 
-Trying to attach that metadata directly to user objects usually hits a wall. Some
-objects are immutable, some come from another package, some have no natural place
-for a default value, and some are not even parameterized in the way your workflow
-needs. The part that always works is to wrap the object construction instead:
+The final object stays domain-native: a `Normal`, a PDF, an amplitude, a callable.
+The constructor holds the fit bookkeeping.
 
-1. Store parameter descriptors in a constructor object.
-2. Collect or update the running parameters from that constructor.
-3. Call `build_model(constructor, pars)` to create the real object.
+## The problem
 
-The wrapped object can be anything: a distribution, a model, a callable, a nested
-composition, or a domain-specific type from another package. `BuildConstructors.jl`
-does not impose a dimensionality, a call signature, or a model interface. Those
-choices stay with you.
+Fitting workflows need more than numbers. Optimizers want bounds and starting
+points; analysis code wants names and uncertainties; nested models need all of
+that collected recursively from sub-components.
 
-## Installation
+Attaching that metadata directly to user objects is awkward: objects are often
+immutable, come from other packages, or have no natural place for a default
+value. **Wrap construction instead** — store descriptors in a constructor, pass
+trial values at build time, call `build_model(constructor, pars)`.
 
-```julia
-using Pkg
-Pkg.add("BuildConstructors")
-```
+## Three-step workflow
 
-## Essential vs Optional
+### 1. Define model shapes once (`src/`)
 
-The essential pattern is small:
-
-1. Use parameter descriptors such as `Fixed`, `Running`, or your own
-   `AbstractParameter` subtype.
-2. Store those descriptors in an `AbstractConstructor`.
-3. Implement `build_model(constructor, pars)`.
-
-Everything else is convenience:
-
-| Layer | Essential? | Why it exists |
-| --- | --- | --- |
-| `Fixed`, `Running`, `FlexibleParameter`, `AdvancedParameter` | Useful defaults | Common descriptor types for fixed/free parameters, defaults, bounds, and uncertainties. |
-| `parameter_values`, `fix!`, `release!`, `update!` | Convenience | Recursive tools for collecting and mutating metadata in nested constructors. |
-| `@with_parameters` | Convenience | Removes boilerplate when a constructor mostly maps parameter descriptors into a `build_model` body. |
-| `serialize` / `deserialize` / `register!` | Optional | Save and restore constructor descriptions through JSON or database-like workflows. |
-| PRB model constructors and loaders | Optional example | Domain-specific probability-model utilities built with the same general mechanism. |
-
-If your object already has a perfect home for metadata, you may not need this
-package. It becomes useful when the object should remain clean, external,
-immutable, or domain-native, but your workflow still needs to know which numbers
-are fixed, running, bounded, initialized, or serializable.
-
-## Basic Idea
-
-Parameters are represented by small descriptor objects. A descriptor decides how a
-numerical value is obtained when the real model is built.
-
-```julia
-using BuildConstructors
-
-Fixed(1.0)        # always evaluates to 1.0
-Running("scale")  # reads `scale` from the supplied parameter values
-```
-
-A constructor stores these descriptors instead of storing the numerical values
-directly:
-
-```julia
-using Distributions
-
-struct ConstructorOfNormalModel{T1<:BuildConstructors.AbstractParameter,
-                                T2<:BuildConstructors.AbstractParameter} <:
-       BuildConstructors.AbstractConstructor
-    description_of_μ::T1
-    description_of_σ::T2
-end
-
-function BuildConstructors.build_model(c::ConstructorOfNormalModel, pars)
-    μ = BuildConstructors.value(c.description_of_μ; pars)
-    σ = BuildConstructors.value(c.description_of_σ; pars)
-    return Normal(μ, σ)
-end
-
-c = ConstructorOfNormalModel(Fixed(0.0), Running("σ"))
-
-parameter_values(c)      # (σ = missing,)
-model = build_model(c, (σ = 0.2,))
-```
-
-This keeps the user object clean. `Normal(0.0, 0.2)` does not need to know that
-`σ` was called `"σ"`, was free in a fit, had a starting value, or came from a JSON
-file. The constructor knows that, and the final object stays exactly the object you
-wanted to build.
-
-## Parameter Descriptors
-
-The package includes a few ready-to-use descriptors:
-
-| Descriptor | Use |
-| --- | --- |
-| `Fixed(value)` | A constant value that is not collected as a named parameter. |
-| `Running(name)` | A free parameter read from `pars` by name. |
-| `FlexibleParameter(name, value)` | A parameter with a stored value that can be fixed or released. |
-| `AdvancedParameter(name, value; boundaries, uncertainty, fixed)` | A parameter with a stored value, bounds, uncertainty, and fixed/free state. |
-
-The same generic tools work recursively on constructors and nested constructors:
-
-```julia
-metadata = parameter_metadata(c)
-parameter_values(c)
-parameter_names(c)
-running_names(c)
-fixed_names(c)
-parameter_uncertainties(c)
-parameter_lower_boundaries(c)
-parameter_upper_boundaries(c)
-running_values(c)
-fixed_values(c)
-
-fix!(c, (:σ,))
-release!(c, (:σ,))
-update!(c, (σ = 0.25,))
-```
-
-When names are duplicated, metadata preserves every entry, while projected collectors keep one key and use the last value.
-
-You can define your own parameter descriptor by subtyping
-`BuildConstructors.AbstractParameter` and implementing `BuildConstructors.value`.
-Implement the other methods only if your descriptor needs to participate in fixing,
-releasing, updating, or collection of metadata.
-
-## The `build_model` Convention
-
-The main convention is:
-
-```julia
-build_model(constructor, pars)
-```
-
-`pars` is deliberately unconstrained. It can be a `NamedTuple`, a
-`ComponentArray`, or any object your parameter descriptors know how to read.
-Likewise, `build_model` can return any Julia object. This is the central design
-choice of the package: the constructor carries metadata and assembly logic, while
-your returned object remains domain-native.
-
-Nested construction is just ordinary Julia:
-
-```julia
-struct ConstructorOfScaled{C,T<:BuildConstructors.AbstractParameter} <:
-       BuildConstructors.AbstractConstructor
-    child::C
-    description_of_scale::T
-end
-
-function BuildConstructors.build_model(c::ConstructorOfScaled, pars)
-    child = build_model(c.child, pars)
-    scale = BuildConstructors.value(c.description_of_scale; pars)
-    return x -> scale * child(x)
-end
-```
-
-Because the metadata collection methods walk over fields of
-`AbstractConstructor`s, running parameters inside `child` are collected together
-with `scale`.
-
-## Less Boilerplate With `@with_parameters`
-
-For many simple wrappers, the `@with_parameters` macro generates the constructor
-type and `build_model` method for you:
+Use `@with_parameters` to declare how descriptors become a real object. Each macro
+block generates a `ConstructorOf…` type and a matching `build_model` method.
 
 ```julia
 using BuildConstructors
@@ -175,138 +33,168 @@ using Distributions
     Normal(μ, σ)
 end)
 
-c = ConstructorOfGauss(Fixed(0.0), Running("σ"))
-model = build_model(c, (σ = 0.2,))
+@with_parameters(Mixture; left, right, f_left::P, begin
+    MixtureModel(
+        [build_model(left, pars), build_model(right, pars)],
+        [f_left, 1 - f_left],
+    )
+end)
 ```
 
-The macro call has three parts:
-
-1. The model name, `Gauss`.
-2. A field list after the semicolon.
-3. A `begin ... end` body that returns the final object.
-
-The generated type is named `ConstructorOf{Name}`. For `Gauss`, the macro creates
-`ConstructorOfGauss` and a method equivalent to
-`build_model(c::ConstructorOfGauss, pars)`.
-
-Field declarations have three forms, and the distinction is important:
+Field roles in the macro header:
 
 | Form | Meaning |
 | --- | --- |
-| `field::P` | A parameter descriptor field, available in the body as the resolved value `field`. |
-| `field::SomeType` | A constant field; in the body use bare `field` (bound from the constructor instance). |
-| `field` | A parametric field (nested constructors, etc.); in the body use bare `field`. |
+| `field::P` | Fit parameter. Resolved from `pars` in the body as `field`. |
+| `field::SomeType` | Fixed configuration on the constructor (e.g. a fit window). |
+| `field` | Nested constructor or other slot; use bare `field` in the body. |
 
-For `field::P`, the generated struct field is named `description_of_field`.
-This keeps the constructor honest: it stores the parameter description, not the
-current numeric value. During `build_model`, the macro inserts:
+Positional constructor arguments follow the same order as the field list.
+
+### 2. Build a constructor — the object your optimizer sees
+
+Instantiate the generated type with parameter descriptors. This tree is what you
+inspect, serialize, fix/release, and hand to your fitting backend.
+
+```julia
+constructor = ConstructorOfMixture(
+    ConstructorOfGauss(
+        AdvancedParameter("μ_left", -0.5; boundaries=(-5.0, 5.0), uncertainty=0.1),
+        AdvancedParameter("σ_left", 1.0; boundaries=(0.05, 5.0), uncertainty=0.05),
+    ),
+    ConstructorOfGauss(
+        AdvancedParameter("μ_right", 0.7; boundaries=(-5.0, 5.0), uncertainty=0.1),
+        AdvancedParameter("σ_right", 1.0; boundaries=(0.05, 5.0), uncertainty=0.05),
+    ),
+    AdvancedParameter("f_left", 0.5; boundaries=(0.0, 1.0), uncertainty=0.02),
+)
+
+start = parameter_values(constructor)
+lower = parameter_lower_boundaries(constructor)
+upper = parameter_upper_boundaries(constructor)
+```
+
+Nested constructors are discovered automatically — `parameter_values` walks the
+whole tree and returns one named tuple of running parameters.
+
+### 3. Optimize: `build_model` produces whatever you need
+
+In the objective, turn trial parameters into the real model, then evaluate your
+metric (PDF, NLL, amplitude, …):
+
+```julia
+using Optim, ComponentArrays
+
+function nll(c, data, pars)
+    model = build_model(c, pars)
+    return -sum(logpdf.(Ref(model), data))
+end
+
+start_ca = ComponentArray(start)
+lower_ca = ComponentArray(lower)
+upper_ca = ComponentArray(upper)
+
+result = optimize(pars -> nll(constructor, data, pars), lower_ca, upper_ca, start_ca, Fminbox(LBFGS()))
+fitted = Optim.minimizer(result)
+
+update!(constructor, fitted)   # write fitted values back into the descriptor tree
+```
+
+`pars` is deliberately unconstrained — `NamedTuple`, `ComponentArray`, or any
+object your descriptors can read. Built-in descriptors use `getproperty`, so
+`pars.μ_left` works out of the box.
+
+The same pattern applies to any return type: wrap `build_model` in your own
+`extended_negative_log_likelihood(constructor, pars, data)` or
+`amplitude(constructor, pars, x)` helpers.
+
+## Installation
+
+```julia
+using Pkg
+Pkg.add("BuildConstructors")
+```
+
+## Parameter descriptors
+
+| Descriptor | Role |
+| --- | --- |
+| `Fixed(value)` | Constant; not collected as a named parameter. |
+| `Running(name)` | Free parameter read from `pars` by name. |
+| `FlexibleParameter(name, value)` | Stored value; can be fixed or released. |
+| `AdvancedParameter(name, value; boundaries, uncertainty, fixed)` | Stored value with bounds, uncertainty, and fixed/free state. |
+
+Define your own by subtyping `AbstractParameter` and implementing `value(p; pars)`.
+
+## Metadata API
+
+These methods recurse into nested `AbstractConstructor` fields:
+
+```julia
+parameter_metadata(constructor)
+parameter_values(constructor)
+parameter_names(constructor)
+running_names(constructor)
+fixed_names(constructor)
+parameter_uncertainties(constructor)
+parameter_lower_boundaries(constructor)
+parameter_upper_boundaries(constructor)
+
+fix!(constructor, (:σ,))
+release!(constructor, (:σ,))
+update!(constructor, (σ=0.25,))
+```
+
+When names repeat, metadata keeps every entry; projected collectors such as
+`parameter_values` deduplicate by name (last wins). Macro-generated constructors
+validate the tree at construction time; manual types can call `validate_parameters`
+after `new`.
+
+## `@with_parameters` details
+
+For `field::P`, the generated struct stores `description_of_field`. During
+`build_model`, the macro inserts:
 
 ```julia
 field = BuildConstructors.value(c.description_of_field; pars)
 ```
 
-For `field::SomeType` and plain `field`, the macro binds `field = c.field` before the body.
-Every name in the field list is therefore available as a local variable in the body.
+For parametric and typed fields, the macro binds `field = c.field` before the
+body. Forward `pars` unchanged to nested `build_model(child, pars)` calls.
 
-The name `pars` is separate from that list: it always refers to the second argument of
-the generated `build_model(c, pars)`, i.e. the caller-supplied parameter bundle. Forward
-it unchanged when composing nested constructors (`build_model(child, pars)`) so inner
-`build_model` methods see the same parameters.
+Hand-written constructors are fine when you need a custom API — subtype
+`AbstractConstructor` and implement `build_model(c, pars)`.
 
-For example:
+## Serialization (optional)
 
-```julia
-@with_parameters(Scaled; child, scale::P, begin
-    child_model = build_model(child, pars)
-    x -> scale * child_model(x)
-end)
-```
-
-Here `child` can be another constructor, a callable, or any user object. `scale`
-is a parameter descriptor, so the generated constructor is called as:
-
-```julia
-c = ConstructorOfScaled(child_constructor, Running("scale"))
-```
-
-The generated struct fields and constructor positional arguments follow the same
-order as the field list in the macro header. For example:
-
-```julia
-@with_parameters(Windowed; model, μ::P, support::Tuple{Float64,Float64}, begin
-    truncated(build_model(model, pars), support[1] + μ, support[2] + μ)
-end)
-```
-
-is constructed as:
-
-```julia
-ConstructorOfWindowed(model, μ_descriptor, support)
-```
-
-Macro-generated constructors validate their parameter trees immediately. Shared
-names whose descriptors compare equal with `==` produce a warning, while unequal
-descriptors throw an error. Manual inner constructors can opt into the same
-invariant after `new`:
-
-```julia
-struct ConstructorOfCustom{L,R} <: AbstractConstructor
-    left::L
-    right::R
-
-    function ConstructorOfCustom(left, right)
-        constructor = new{typeof(left),typeof(right)}(left, right)
-        return validate_parameters(constructor)
-    end
-end
-```
-
-Use the macro when that generated shape is clear and useful. Write the constructor
-and `build_model` by hand when you need extra validation,
-special constructors, or a more explicit API.
-
-## Serialization
-
-Serialization is useful when constructor descriptions need to move through files,
-databases, or fitting pipelines. The package provides `serialize` and `deserialize`
-methods for its built-in descriptors and included example constructors. Custom
-types can participate by defining their own methods and registering the type:
+Save and restore constructor descriptions through JSON or database workflows:
 
 ```julia
 BuildConstructors.register!(ConstructorOfMyModel)
+serialize(constructor; pars)
+deserialize(Type{ConstructorOfMyModel}, dict)
 ```
 
-Serialization is a bonus layer on top of the core pattern. You can use
-constructors, parameter collection, `fix!`, `release!`, `update!`, and
-`build_model` without using JSON at all.
+Serialization is optional; the core pattern works without JSON.
 
-## Included Examples
+## Physics model extension (optional)
 
-The repository includes several constructors for probability-model workflows,
-including the physical-resolution-background composition used in the original
-application. They are examples of the same general mechanism rather than a
-restriction on what the package can build.
-
-These examples and JSON/database helpers live in the `PhysicsModelsExt` package
-extension. Install the weak dependencies in addition to `BuildConstructors` when
-you want constructors such as `ConstructorOfBW`, `ConstructorOfGaussian`, or
-`load_prb_model_from_json`:
-
-```julia
-using Pkg
-Pkg.add([
-    "Distributions",
-    "DistributionsHEP",
-    "JSON",
-    "NumericalDistributions",
-])
-```
-
-Then load the extension dependencies before using the physics helpers:
+Resonance/resolution/background constructors (`ConstructorOfBW`, `ConstructorOfGaussian`, …)
+and JSON loaders live in the `PhysicsModelsExt` package extension. Load the weak
+dependencies in the same session:
 
 ```julia
 using Distributions, DistributionsHEP, JSON, NumericalDistributions
 using BuildConstructors
 
-Phys = BuildConstructors.physics_models_extension()
+Phys = physics_models_extension()
+Phys.load_prb_model_from_json("database.json", "bw", "CBpSECH", "Pol2")
 ```
+
+See [`examples/2d_distribution_fit/`](examples/2d_distribution_fit/) for a nested
+2D extended mixture model built with the same workflow.
+
+## Documentation
+
+Full API reference and tutorials (nested constructors, Optim + ComponentArrays,
+Minuit2): [https://RUB-EP1.github.io/BuildConstructors.jl](https://RUB-EP1.github.io/BuildConstructors.jl)
