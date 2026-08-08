@@ -1,5 +1,9 @@
 # BuildConstructors.jl
 
+[![Tests](https://github.com/RUB-EP1/BuildConstructors.jl/actions/workflows/Test.yml/badge.svg)](https://github.com/RUB-EP1/BuildConstructors.jl/actions/workflows/Test.yml)
+[![Docs](https://github.com/RUB-EP1/BuildConstructors.jl/actions/workflows/Docs.yml/badge.svg)](https://RUB-EP1.github.io/BuildConstructors.jl)
+![AI contribution](https://img.shields.io/badge/made_with_AI-human_in_charge-orange.svg)
+
 Attach metadata to model parameters — names, starting values, bounds, fixed/free
 state — without polluting the model object itself. Walk a nested constructor tree
 and discover every parameter in one place.
