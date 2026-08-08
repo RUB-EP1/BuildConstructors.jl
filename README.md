@@ -85,13 +85,26 @@ constructor = ConstructorOfMixture(
     AdvancedParameter("f_left", 0.5; boundaries=(0.0, 1.0), uncertainty=0.02),
 )
 
-start = parameter_values(constructor)
-lower = parameter_lower_boundaries(constructor)
-upper = parameter_upper_boundaries(constructor)
+start = running_values(constructor)
+lower = running_lower_boundaries(constructor)
+upper = running_upper_boundaries(constructor)
+uncertainties = running_uncertainties(constructor)
 ```
 
-Nested constructors are discovered automatically — `parameter_values` walks the
-whole tree and returns one named tuple of running parameters.
+Nested constructors are discovered automatically. The `running_*` collectors walk
+the whole tree and return only the parameters that are currently free. After
+`fix!(constructor, (:μ_left,))`, the fit vector shrinks automatically:
+
+```julia
+fix!(constructor, (:μ_left,))
+running_values(constructor)              # no longer includes μ_left
+running_lower_boundaries(constructor)
+running_upper_boundaries(constructor)
+running_uncertainties(constructor)
+```
+
+Use `parameter_values` and the other `parameter_*` collectors when you need
+metadata for every named descriptor, including fixed ones.
 
 ### 3. Optimize: `build_model` produces whatever you need
 
@@ -137,17 +150,32 @@ Define your own by subtyping `AbstractParameter` and implementing `value(p; pars
 
 ## Metadata API
 
+Collectors come in three families: `parameter_*` (all named parameters),
+`running_*` (free parameters only — use these for fitting), and `fixed_*`
+(fixed parameters only). When nothing is fixed, `parameter_*` and `running_*`
+agree.
+
 These methods recurse into nested `AbstractConstructor` fields:
 
 ```julia
 parameter_metadata(constructor)
 parameter_values(constructor)
 parameter_names(constructor)
-running_names(constructor)
-fixed_names(constructor)
 parameter_uncertainties(constructor)
 parameter_lower_boundaries(constructor)
 parameter_upper_boundaries(constructor)
+
+running_names(constructor)
+running_values(constructor)
+running_uncertainties(constructor)
+running_lower_boundaries(constructor)
+running_upper_boundaries(constructor)
+
+fixed_names(constructor)
+fixed_values(constructor)
+fixed_uncertainties(constructor)
+fixed_lower_boundaries(constructor)
+fixed_upper_boundaries(constructor)
 
 fix!(constructor, (:σ,))
 release!(constructor, (:σ,))

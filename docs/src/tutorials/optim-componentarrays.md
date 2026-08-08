@@ -46,12 +46,21 @@ truth = MixtureModel([Normal(-1.0, 0.45), Normal(1.2, 0.35)], [0.6, 0.4])
 data = rand(truth, 2_000)
 ```
 
-Convert the constructor metadata to `ComponentArray`s:
+Convert the constructor metadata to `ComponentArray`s. Use the `running_*`
+collectors so fixed parameters stay out of the optimizer input:
 
 ```julia
-start = ComponentArray(parameter_values(constructor))
-lower = ComponentArray(parameter_lower_boundaries(constructor))
-upper = ComponentArray(parameter_upper_boundaries(constructor))
+start = ComponentArray(running_values(constructor))
+lower = ComponentArray(running_lower_boundaries(constructor))
+upper = ComponentArray(running_upper_boundaries(constructor))
+```
+
+If some parameters should stay fixed during the fit, call `fix!` first. The
+running collectors shrink to the free subset:
+
+```julia
+fix!(constructor, (:μ_left,))
+start = ComponentArray(running_values(constructor))
 ```
 
 The negative log-likelihood can pass the `ComponentArray` directly into
