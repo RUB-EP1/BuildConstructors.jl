@@ -14,15 +14,20 @@ constructor = ConstructorOfGauss(
     AdvancedParameter("μ", 0.0; boundaries = (-5.0, 5.0), uncertainty = 0.1),
     AdvancedParameter("σ", 1.0; boundaries = (0.05, 5.0), uncertainty = 0.1),
 )
-pars = running_values(constructor)
 
-dict = serialize(constructor; pars)
+# After a fit: write values into descriptors, then serialize without extra pars
+update!(constructor, fitted)
+dict = serialize(constructor)
 restored, starting = deserialize(ConstructorOfGauss, dict)
 ```
 
+Pass `pars` to override specific names (`serialize(constructor; pars=(σ=0.2,))`).
+[`Running`](@ref) parameters have no stored default — their names must appear in
+`pars` (or be updated elsewhere before serialize).
+
 The second return value of [`deserialize`](@ref) is a `NamedTuple` of starting
-values collected from running parameters (`Running`, free `FlexibleParameter`, free
-`AdvancedParameter`). Pass it to [`build_model`](@ref) as `pars`.
+values for named parameters (`Running`, `FlexibleParameter`, `AdvancedParameter`).
+Pass it to [`build_model`](@ref) as `pars`.
 
 ## JSON round-trip
 
@@ -47,8 +52,9 @@ is loaded — no extra methods to define for those structs.
 [`fieldnames`](https://docs.julialang.org/en/v1/base/reflection/#Base.fieldnames) of
 the constructor:
 
-- **`AbstractParameter` fields** — serialized with type-specific rules (`Fixed` stores
-  `"value"`, `Running` stores `"name"` and `"starting_value"` from `pars`, …).
+- **`AbstractParameter` fields** — `Fixed` stores `"value"`; named descriptors store
+  `"starting_value"` from `pars` when the name is present, otherwise from the stored
+  `.value` on the descriptor (`Running` must be supplied via `pars`).
 - **Nested `AbstractConstructor` fields** — serialized recursively.
 - **Plain data** (`Tuple`, `Int`, `Float64`, …) — stored as-is.
 

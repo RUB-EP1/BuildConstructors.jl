@@ -55,6 +55,26 @@ end
 end
 
 
+@testset "Serialize uses stored value; pars overrides" begin
+    p = FlexibleParameter("m", 2.0)
+    fix!(p, (:m,))
+    @test serialize(p)["starting_value"] == 2.0
+    @test serialize(p; pars = (m = 9.0,))["starting_value"] == 9.0
+
+    a = AdvancedParameter("x", 1.0; fixed = true)
+    @test serialize(a)["starting_value"] == 1.0
+    @test serialize(a; pars = (x = 3.0,))["starting_value"] == 3.0
+
+    update!(p, (m = 1.9,))
+    @test serialize(p)["starting_value"] == 1.9
+end
+
+@testset "Serialize Running requires pars" begin
+    r = Running("σ")
+    @test_throws ErrorException serialize(r)
+    @test serialize(r; pars = (σ = 0.1,))["starting_value"] == 0.1
+end
+
 @testset "Update and pickup" begin
     @test parameter_values(constructor.model_p) == (m = 2.0, Γ = 0.2)
     update!(constructor.model_p, (m = 1.9, Γ = 0.1))

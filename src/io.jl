@@ -9,37 +9,65 @@ _type_name(::Type{T}) where {T} = string(nameof(T))
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 """
-    serialize(constructor_or_parameter; pars)
+    serialize(constructor_or_parameter; pars=NamedTuple())
 
 Convert a parameter descriptor or constructor into a dictionary-like object.
 
-For running parameters, `pars` supplies the current numerical values that should be
-stored as starting values. Serialization is optional: the core constructor pattern
-works without it, but these methods are useful when constructor descriptions need
-to be saved to JSON or a database.
+The result is a **snapshot** of the constructor tree together with parameter
+values — not the tree alone. Every parameter field is written with a numeric
+value (`"value"` or `"starting_value"`) so the dict can be restored and passed
+to [`build_model`](@ref).
+
+Fixed/free status does not affect serialization. Numbers come from `pars`
+when a matching name is supplied, otherwise from the stored field on the
+descriptor (see [`update!`](@ref)). Typical workflow after a fit:
+`update!(constructor, fitted)` then `serialize(constructor)`.
+
+How each descriptor type obtains the stored number:
+
+- [`Fixed`](@ref) — from the descriptor; `pars` ignored.
+- [`Running`](@ref) — from `pars` only (no stored default; must be supplied).
+- [`FlexibleParameter`](@ref) / [`AdvancedParameter`](@ref) — `pars[name]` when
+  present, otherwise the stored `.value`.
+
+Serialization is optional: the core constructor pattern works without it, but
+these methods are useful when descriptions need to be saved to JSON or a database.
 """
-serialize(c::Fixed; pars) = LittleDict("type" => "Fixed", "value" => c.value)
+function _serialized_value(c::Running; pars)
+    sym = Symbol(c.name)
+    hasproperty(pars, sym) ||
+        error("serialize($(typeof(c))): `pars` must contain $(repr(c.name))")
+    return getproperty(pars, sym)
+end
 
-serialize(c::Running; pars) =
-    LittleDict("type" => "Running", "name" => c.name, "starting_value" => value(c; pars))
+_serialized_value(c::Union{FlexibleParameter,AdvancedParameter}; pars) =
+    hasproperty(pars, Symbol(c.name)) ? getproperty(pars, Symbol(c.name)) : c.value
 
-serialize(c::FlexibleParameter; pars) = LittleDict(
+serialize(c::Fixed; pars=NamedTuple()) = LittleDict("type" => "Fixed", "value" => c.value)
+
+serialize(c::Running; pars=NamedTuple()) = LittleDict(
+    "type" => "Running",
+    "name" => c.name,
+    "starting_value" => _serialized_value(c; pars),
+)
+
+serialize(c::FlexibleParameter; pars=NamedTuple()) = LittleDict(
     "type" => "FlexibleParameter",
     "name" => c.name,
-    "starting_value" => value(c; pars),
+    "starting_value" => _serialized_value(c; pars),
     "fixed" => c.fixed,
 )
 
-serialize(c::AdvancedParameter; pars) = LittleDict(
+serialize(c::AdvancedParameter; pars=NamedTuple()) = LittleDict(
     "type" => "AdvancedParameter",
     "name" => c.name,
-    "starting_value" => value(c; pars),
+    "starting_value" => _serialized_value(c; pars),
     "boundaries" => c.boundaries,
     "uncertainty" => c.uncertainty,
     "fixed" => c.fixed,
 )
 
-function serialize(p::AbstractParameter; pars)
+function serialize(p::AbstractParameter; pars=NamedTuple())
     d = LittleDict{String,Any}("type" => _type_name(typeof(p)))
     for field in fieldnames(typeof(p))
         d[string(field)] = getfield(p, field)
@@ -47,7 +75,7 @@ function serialize(p::AbstractParameter; pars)
     return d
 end
 
-function serialize(c::AbstractConstructor; pars)
+function serialize(c::AbstractConstructor; pars=NamedTuple())
     T = typeof(c)
     d = LittleDict{String,Any}("type" => _type_name(T))
     for field in fieldnames(T)
@@ -56,7 +84,7 @@ function serialize(c::AbstractConstructor; pars)
     return d
 end
 
-function _serialize_value(x; pars)
+function _serialize_value(x; pars=NamedTuple())
     x isa AbstractParameter && return serialize(x; pars)
     x isa AbstractConstructor && return serialize(x; pars)
     return x
