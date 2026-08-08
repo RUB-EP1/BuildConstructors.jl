@@ -7,8 +7,8 @@
 #
 # The example uses `src/two_dimensional_model.jl` for constructor types,
 # `ExtendedMixtureModel` and `extended_negative_log_likelihood` live in
-# `DistributionsHEP.jl`. One-dimensional projections below are computed by
-# integrating the 2D density grid.
+# `DistributionsHEP.jl`. One-dimensional projections use a small local
+# `marginalize` helper defined below.
 #
 # ## How `two_dimensional_model.jl` defines the model
 #
@@ -254,8 +254,11 @@ mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length=160))
 density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
 
 dm = (mass_grid[end] - mass_grid[1]) / (length(mass_grid) - 1)
-projection_1 = vec(sum(density_grid, dims=2)) .* dm
-projection_2 = vec(sum(density_grid, dims=1)) .* dm
+marginalize(model, dim, grid, dm) =
+    dim == 1 ? (x -> sum(model([x, y]) for y in grid) * dm) :
+               (x -> sum(model([y, x]) for y in grid) * dm)
+projection_1 = marginalize(model, 1, mass_grid, dm).(mass_grid)
+projection_2 = marginalize(model, 2, mass_grid, dm).(mass_grid)
 
 bin_size = (KK_LIMITS[2] - KK_LIMITS[1]) / (n_edges - 1)
 
