@@ -8,6 +8,16 @@ _type_name(::Type{T}) where {T} = string(nameof(T))
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+function _serialized_value(c::Running; pars)
+    sym = Symbol(c.name)
+    hasproperty(pars, sym) ||
+        error("serialize($(typeof(c))): `pars` must contain $(repr(c.name))")
+    return getproperty(pars, sym)
+end
+
+_serialized_value(c::Union{FlexibleParameter,AdvancedParameter}; pars) =
+    hasproperty(pars, Symbol(c.name)) ? getproperty(pars, Symbol(c.name)) : c.value
+
 """
     serialize(constructor_or_parameter; pars=NamedTuple())
 
@@ -36,16 +46,6 @@ How each descriptor type obtains the stored number:
 Serialization is optional: the core constructor pattern works without it, but
 these methods are useful when descriptions need to be saved to JSON or a database.
 """
-function _serialized_value(c::Running; pars)
-    sym = Symbol(c.name)
-    hasproperty(pars, sym) ||
-        error("serialize($(typeof(c))): `pars` must contain $(repr(c.name))")
-    return getproperty(pars, sym)
-end
-
-_serialized_value(c::Union{FlexibleParameter,AdvancedParameter}; pars) =
-    hasproperty(pars, Symbol(c.name)) ? getproperty(pars, Symbol(c.name)) : c.value
-
 serialize(c::Fixed; pars=NamedTuple()) = LittleDict("type" => "Fixed", "value" => c.value)
 
 serialize(c::Running; pars=NamedTuple()) = LittleDict(
