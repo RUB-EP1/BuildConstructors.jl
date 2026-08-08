@@ -193,15 +193,7 @@ after `new`.
 
 ## Serialization (optional)
 
-Save and restore constructor descriptions through JSON or database workflows:
-
-```julia
-BuildConstructors.register!(ConstructorOfMyModel)
-serialize(constructor; pars)
-deserialize(Type{ConstructorOfMyModel}, dict)
-```
-
-Serialization is optional; the core pattern works without JSON.
+Constructor trees round-trip through [`serialize`](https://RUB-EP1.github.io/BuildConstructors.jl/serialization/) / [`deserialize`](https://RUB-EP1.github.io/BuildConstructors.jl/serialization/) automatically — no per-type methods for ordinary structs. JSON is optional; see the [serialization docs](https://RUB-EP1.github.io/BuildConstructors.jl/serialization/).
 
 ## Physics model extension (optional)
 

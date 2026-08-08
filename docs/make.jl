@@ -40,6 +40,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
         ),
         pages=[
             "Home" => "index.md",
+            "Serialization" => "serialization.md",
             "Tutorials" => [
                 "Nested Constructors" => "tutorials/nested-constructors.md",
                 "Optim with ComponentArrays" => "tutorials/optim-componentarrays.md",
