@@ -100,10 +100,17 @@ end
 
 Rebuild a parameter descriptor or constructor from serialized fields.
 
-The second return value is a `NamedTuple` of starting values collected while
-deserializing running parameters. Custom serializable types should implement
-[`serialize`](@ref) / [`deserialize`](@ref) and call [`register!`](@ref) so type
-names can be resolved from serialized data.
+Walks struct fields for [`AbstractConstructor`](@ref) subtypes (same layout as
+[`serialize`](@ref)). Nested dicts with a `"type"` key are resolved via
+[`register!`](@ref).
+
+The second return value is a `NamedTuple` of `"starting_value"` entries collected
+from named parameters ([`Running`](@ref), [`FlexibleParameter`](@ref),
+[`AdvancedParameter`](@ref)) — pass it to [`build_model`](@ref) as `pars`.
+[`Fixed`](@ref) parameters do not contribute.
+
+Custom types should implement [`serialize`](@ref) / [`deserialize`](@ref) and call
+[`register!`](@ref) so type names can be resolved from serialized data.
 """
 function deserialize(::Type{<:Fixed}, all_fields)
     Fixed(all_fields["value"]), NamedTuple()
