@@ -220,3 +220,25 @@ See [`examples/2d_distribution_fit/`](examples/2d_distribution_fit/) for a neste
 
 Full API reference and tutorials (nested constructors, Optim + ComponentArrays,
 Minuit2): [https://RUB-EP1.github.io/BuildConstructors.jl](https://RUB-EP1.github.io/BuildConstructors.jl)
+
+## Related packages
+
+One way to read BuildConstructors is as a way to **mark parameters and attach
+metadata** — names, defaults, bounds, fixed/free state — while keeping the
+domain object itself clean. Other packages pursue similar goals with different
+trade-offs.
+
+**Metadata on struct fields** — [FieldMetadata.jl](https://github.com/rafaqz/FieldMetadata.jl)
+and [Flatten.jl](https://github.com/rafaqz/Flatten.jl) attach annotations to
+fields and flatten nested structs, rather than maintaining a separate constructor
+tree.
+
+**Working with parameter bundles** — [Parameters.jl](https://github.com/michaelhatherly/Parameters.jl)
+(fantastic `@unpack`), [Base `@kwdef`](https://docs.julialang.org/en/v1/base/structs/#Base.@kwdef)
+(same idea, more limited), [ComponentArrays.jl](https://github.com/jw3126/ComponentArrays.jl)
+(a labeled way to pass parameters around), and [Functors.jl](https://github.com/FluxML/Functors.jl)
+(retrieve parametric dependencies implicitly, without naming each one).
+
+**Also worth knowing** — [QuickTypes.jl](https://github.com/cstjean/QuickTypes.jl) for
+compact keyword-struct definitions, and [NamedTupleTools.jl](https://github.com/JeffreySarnoff/NamedTupleTools.jl)
+for manipulating the `NamedTuple`s that collectors return.
