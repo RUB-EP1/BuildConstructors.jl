@@ -11,7 +11,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Tighten `[compat]` bounds with upper limits for General registry registration (tested against latest releases: OrderedCollections 2.0.1, ComponentArrays 0.15.44, Distributions 0.25.130, DistributionsHEP 0.6.2, JSON 1.7.0, NumericalDistributions 0.6.0).
-- Remove committed `docs/Manifest.toml` and `benchmark/Manifest.toml`; ignore them in `.gitignore`.
+- Remove committed `docs/Manifest.toml`; ignore it in `.gitignore`.
 
 ## 0.8.0
 
