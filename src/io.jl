@@ -87,9 +87,9 @@ function serialize(c::AbstractConstructor; pars=NamedTuple())
     return d
 end
 
-_serialize_value(x::AbstractParameter; pars=NamedTuple()) = serialize(x; pars)
-_serialize_value(x::AbstractConstructor; pars=NamedTuple()) = serialize(x; pars)
-_serialize_value(x; pars=NamedTuple()) = x
+_serialize_value(x::AbstractParameter; pars) = serialize(x; pars)
+_serialize_value(x::AbstractConstructor; pars) = serialize(x; pars)
+_serialize_value(x; pars) = x
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
