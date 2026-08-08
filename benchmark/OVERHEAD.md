@@ -2,6 +2,52 @@
 
 BuildConstructors keeps fit metadata (names, bounds, fixed/free state) in a **constructor tree** and builds the domain model on demand via `build_model(constructor, pars)`. The question for fitting is: how much does that indirection cost at runtime and in memory?
 
+## Where overhead comes from
+
+BuildConstructors does not wrap the built model or intercept PDF calls. All extra work happens **inside `build_model`** (and, if misused, in metadata collectors). The main sources:
+
+### 1. Parameter lookup from `pars`
+
+Running parameters are resolved by name. The macro-generated body starts with lines like `μ = value(c.description_of_μ; pars)`, and built-in descriptors implement:
+
+```julia
+value(p::Running; pars) = getproperty(pars, Symbol(p.name))
+value(p::Fixed; pars) = p.value   # ignores pars
+```
+
+**What this means in practice:**
+
+- **`Fixed` parameters** read a stored `Float64` — no `pars` access, essentially free.
+- **`Running` / free `FlexibleParameter` / free `AdvancedParameter`** hit `getproperty(pars, Symbol(p.name))` once per descriptor per `build_model` call.
+- For a **`NamedTuple`**, `getproperty` is a fast, type-stable field access. LLVM often lowers this to the same load a hand-written `pars.μ` would use, but only after inlining through `value` — there is still a **`value` dispatch** and a **`Symbol(p.name)`** step (the name lives in a `String` field on the descriptor, not as a compile-time symbol).
+- For a **`ComponentArray`** or other custom `pars` type, lookup cost depends on that type's `getproperty` — worth profiling if the fit loop is hot.
+
+So: name-based access is **not** guaranteed to compile down to bare numbers in all cases, but for the usual `NamedTuple` fit vector it is **cheap relative to building a PDF**. The benchmark's simple-model ratios (~2–3× on an already sub-ns path) are mostly this dispatch + lookup stack, not a structural algorithmic cost.
+
+### 2. Nested construction and passing the full `pars`
+
+Nested models compose as `build_model(child, pars)` from parent bodies — the **same `pars` object** is forwarded to every sub-constructor (by reference; no copy).
+
+**Convenience cost:**
+
+- Each tree node runs its own **`build_model` method** (dynamic dispatch per constructor type).
+- Each node re-runs **`value(...; pars)`** for its own `::P` fields, even when only a leaf parameter changed.
+- **`Fixed` subtrees are rebuilt every iteration** — their numeric inputs are constants, but the user's `build_model` body (e.g. `Normal(...)`, `MixtureModel(...)`, `fft_convolve`) still runs unless the user structures code to avoid it.
+
+Depth therefore multiplies **dispatch + descriptor walks**, not `pars` copying. For deep trees with expensive leaves (PRB: BW + resolution + FFT), **leaf construction dominates**; the extra parent/child frames are a small fraction (~17% on `build_model` for the PRB case in the table below).
+
+### 3. Other sources (and non-sources)
+
+| Source | In fit loop? | Notes |
+| --- | --- | --- |
+| **`validate_parameters`** | No | Runs once when the constructor is created. |
+| **`running_*` / `parameter_*` collectors** | Should be no | Walk the tree and allocate `NamedTuple`s — sub-ns in benchmarks, but unnecessary inside `objective`. |
+| **Descriptor objects in the tree** | Persistent | Small heap structs (`Running`, `AdvancedParameter`, …); paid once, not per iteration. |
+| **Built-model allocations** | Yes | `Normal`, `MixtureModel`, FFT grids, etc. — same as hand-written code; usually **much larger** than BuildConstructors overhead. |
+| **Serialization (`serialize` / JSON)** | No | Separate workflow; not on the hot path. |
+
+**Not overhead:** wrapping or proxying the returned model; intercepting `pdf` / `logpdf`; copying the full parameter vector at each nesting level.
+
 ## Short answer
 
 | Concern | Verdict |
