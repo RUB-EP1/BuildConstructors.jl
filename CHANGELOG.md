@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 
 - Tighten `[compat]` bounds with upper limits for General registry registration (tested against latest releases: OrderedCollections 2.0.1, ComponentArrays 0.15.44, Distributions 0.25.130, DistributionsHEP 0.6.2, JSON 1.7.0, NumericalDistributions 0.6.0).
 - Remove committed `docs/Manifest.toml`; ignore it in `.gitignore`.
+- Drop git-pinned `Minuit2` and `DistributionsHEP` docs dependencies; use registered releases and integrate 2D projections from the density grid.
 
 ## 0.8.0
 
