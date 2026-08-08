@@ -17,9 +17,15 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
 BuildConstructors = {path = ".."}
-DistributionsHEP = {rev = "codex/marginalize", url = "https://github.com/JuliaHEP/DistributionsHEP.jl.git"}
-Minuit2 = {rev = "codex/remove-roofit-core", url = "https://github.com/JuliaHEP/Minuit2.jl"}
 
 [compat]
+ComponentArrays = "0.15"
+Distributions = "0.25"
 DistributionsHEP = "0.6"
 Documenter = "1"
+JSON = "1"
+Minuit2 = "0.5"
+NumericalDistributions = "0.5, 0.7"
+Optim = "1"
+Plots = "1"
+julia = "1.9"

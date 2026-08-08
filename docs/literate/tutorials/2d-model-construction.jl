@@ -6,9 +6,9 @@
 # tutorials.
 #
 # The example uses `src/two_dimensional_model.jl` for constructor types,
-# constants, and a thin wrapper around `DistributionsHEP.extended_negative_log_likelihood`.
-# `ExtendedMixtureModel`, `marginalize`, and the extended NLL live in
-# `DistributionsHEP.jl` (pinned to branch `codex/extended-mixture-model`).
+# `ExtendedMixtureModel` and `extended_negative_log_likelihood` live in
+# `DistributionsHEP.jl`. One-dimensional projections use a small local
+# `marginalize` helper defined below.
 #
 # ## How `two_dimensional_model.jl` defines the model
 #
@@ -253,10 +253,12 @@ n_edges = 45
 mass_grid = collect(range(KK_LIMITS[1], KK_LIMITS[2]; length=160))
 density_grid = [model([m1, m2]) for m1 in mass_grid, m2 in mass_grid]
 
-marginal_1 = DistributionsHEP.marginalize(model, 1)
-marginal_2 = DistributionsHEP.marginalize(model, 2)
-projection_1 = marginal_1.(mass_grid)
-projection_2 = marginal_2.(mass_grid)
+dm = (mass_grid[end] - mass_grid[1]) / (length(mass_grid) - 1)
+marginalize(model, dim, grid, dm) =
+    dim == 1 ? (x -> sum(model([x, y]) for y in grid) * dm) :
+               (x -> sum(model([y, x]) for y in grid) * dm)
+projection_1 = marginalize(model, 1, mass_grid, dm).(mass_grid)
+projection_2 = marginalize(model, 2, mass_grid, dm).(mass_grid)
 
 bin_size = (KK_LIMITS[2] - KK_LIMITS[1]) / (n_edges - 1)
 

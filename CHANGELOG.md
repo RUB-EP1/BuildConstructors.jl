@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.8.1
+
+### Added
+
+- MIT license.
+
+### Changed
+
+- Tighten `[compat]` bounds with upper limits for General registry registration (tested against latest releases: OrderedCollections 2.0.1, ComponentArrays 0.15.44, Distributions 0.25.130, DistributionsHEP 0.6.2, JSON 1.7.0, NumericalDistributions 0.6.0).
+- Remove committed `docs/Manifest.toml`; ignore it in `.gitignore`.
+- Drop git-pinned `Minuit2` and `DistributionsHEP` docs dependencies; use registered releases and a local `marginalize` helper in the 2D tutorial.
+
+## 0.8.0
+
+### Added
+
+- Generic recursive `serialize` / `deserialize` via multiple dispatch; removes hand-written per-type I/O boilerplate.
+- `AdvancedParameter(...; fixed=false)` keyword constructor for initial fixed/free state.
+- Overhead benchmark suite under `benchmark/`.
+- Literate tutorial for 2D model construction with plots.
+- README: problem-first three-step workflow, related packages section, CI and docs badges.
+- Documentation for running bounds and uncertainties in fitting workflows.
+- Serialization docs page.
+
+### Changed
+
+- Relax `DistributionsHEP` compat for `PhysicsModelsExt` to `0.5, 0.6`.
+- Validate shared parameters during construction (`validate_parameters` on macro-generated constructors).
+- README rewritten around define → instantiate → optimize workflow.
+
+### Removed
+
+- Unused data fixture files.
+- Hand-written `physics_io.jl` serialization boilerplate.
+
 ## 0.7.0
 
 ### Added
