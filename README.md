@@ -150,6 +150,11 @@ Define your own by subtyping `AbstractParameter` and implementing `value(p; pars
 
 ## Metadata API
 
+Collectors come in three families: `parameter_*` (all named parameters),
+`running_*` (free parameters only — use these for fitting), and `fixed_*`
+(fixed parameters only). When nothing is fixed, `parameter_*` and `running_*`
+agree.
+
 These methods recurse into nested `AbstractConstructor` fields:
 
 ```julia
