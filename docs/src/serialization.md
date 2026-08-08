@@ -15,19 +15,24 @@ constructor = ConstructorOfGauss(
     AdvancedParameter("σ", 1.0; boundaries = (0.05, 5.0), uncertainty = 0.1),
 )
 
-# After a fit: write values into descriptors, then serialize without extra pars
+# After a fit: write values into descriptors, then serialize with default pars
 update!(constructor, fitted)
-dict = serialize(constructor)
+dict = serialize(constructor)   # pars=NamedTuple() — uses stored .value fields
+
+# Running parameters have no stored default; pass pars (or error):
+# serialize(constructor; pars=(σ=0.1,))
+
+# Override specific names anytime:
+# serialize(constructor; pars=(σ=0.2,))
+
 restored, starting = deserialize(ConstructorOfGauss, dict)
 ```
 
-Pass `pars` to override specific names (`serialize(constructor; pars=(σ=0.2,))`).
-[`Running`](@ref) parameters have no stored default — their names must appear in
-`pars` (or be updated elsewhere before serialize).
+Default `pars=NamedTuple()` uses stored `.value` fields and errors if a
+[`Running`](@ref) parameter is present without a matching entry in `pars`.
 
 The second return value of [`deserialize`](@ref) is a `NamedTuple` of starting
-values for named parameters (`Running`, `FlexibleParameter`, `AdvancedParameter`).
-Pass it to [`build_model`](@ref) as `pars`.
+values for named parameters. Pass it to [`build_model`](@ref) as `pars`.
 
 ## JSON round-trip
 

@@ -18,15 +18,18 @@ values — not the tree alone. Every parameter field is written with a numeric
 value (`"value"` or `"starting_value"`) so the dict can be restored and passed
 to [`build_model`](@ref).
 
-Fixed/free status does not affect serialization. Numbers come from `pars`
-when a matching name is supplied, otherwise from the stored field on the
-descriptor (see [`update!`](@ref)). Typical workflow after a fit:
-`update!(constructor, fitted)` then `serialize(constructor)`.
+**Default `pars=NamedTuple()`:** use values already stored on the descriptors
+(typically after [`update!`](@ref)). This works whenever the tree has no
+[`Running`](@ref) parameters. If a `Running` parameter is present and its name
+is absent from `pars`, serialization errors.
+
+Pass `pars` to supply or override specific names. Fixed/free status does not
+affect serialization — only whether the name appears in `pars`.
 
 How each descriptor type obtains the stored number:
 
 - [`Fixed`](@ref) — from the descriptor; `pars` ignored.
-- [`Running`](@ref) — from `pars` only (no stored default; must be supplied).
+- [`Running`](@ref) — from `pars` only (no stored default; required).
 - [`FlexibleParameter`](@ref) / [`AdvancedParameter`](@ref) — `pars[name]` when
   present, otherwise the stored `.value`.
 
