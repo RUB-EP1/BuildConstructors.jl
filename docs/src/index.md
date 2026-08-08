@@ -30,6 +30,11 @@ model = build_model(constructor, start)
 
 The constructor carries the metadata. The built object is just a `Normal`.
 
+## Saving constructor trees
+
+See [Serialization](serialization.md) for round-trip persistence (JSON optional).
+Physics constructors work the same way once the extension is loaded.
+
 ## Optional physics constructors
 
 When you load `JSON`, `Distributions`, `DistributionsHEP`, and `NumericalDistributions`
@@ -77,6 +82,7 @@ BuildConstructors.fix!
 BuildConstructors.release!
 BuildConstructors.update!
 BuildConstructors.@with_parameters
+BuildConstructors.register!
 BuildConstructors.serialize
 BuildConstructors.deserialize
 BuildConstructors.physics_models_extension
