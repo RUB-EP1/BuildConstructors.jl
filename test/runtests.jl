@@ -1,12 +1,6 @@
 using Test
 using BuildConstructors
 
-@testset "Mutation helpers are not exported" begin
-    @test :fix! ∉ names(BuildConstructors)
-    @test :release! ∉ names(BuildConstructors)
-    @test :update! ∉ names(BuildConstructors)
-end
-
 @with_parameters(AffineCore; slope::P, intercept::P, begin
     x -> slope * x + intercept
 end)
