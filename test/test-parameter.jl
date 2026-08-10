@@ -1,4 +1,5 @@
 using BuildConstructors
+import BuildConstructors: fix!, release!, update!
 using ComponentArrays
 using Test
 

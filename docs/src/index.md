@@ -30,6 +30,13 @@ model = build_model(constructor, start)
 
 The constructor carries the metadata. The built object is just a `Normal`.
 
+The mutating helpers `fix!`, `release!`, and `update!` are intentionally not
+exported because their names are common. Import them explicitly when needed:
+
+```julia
+import BuildConstructors: fix!, release!, update!
+```
+
 ## Saving constructor trees
 
 See [Serialization](serialization.md) for round-trip persistence (JSON optional).
