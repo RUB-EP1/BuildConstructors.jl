@@ -235,6 +235,6 @@ tree.
 (a labeled way to pass parameters around), and [Functors.jl](https://github.com/FluxML/Functors.jl)
 (retrieve parametric dependencies implicitly, without naming each one).
 
-**Also worth knowing** — [QuickTypes.jl](https://github.com/cstjean/QuickTypes.jl) for
-compact keyword-struct definitions, and [NamedTupleTools.jl](https://github.com/JeffreySarnoff/NamedTupleTools.jl)
+**Also worth knowing** — [PropertyFunctions.jl/](https://github.com/oschulz/PropertyFunctions.jl/) for creating object generators,
+[QuickTypes.jl](https://github.com/cstjean/QuickTypes.jl) for compact keyword-struct definitions, and [NamedTupleTools.jl](https://github.com/JeffreySarnoff/NamedTupleTools.jl)
 for manipulating the `NamedTuple`s that collectors return.
