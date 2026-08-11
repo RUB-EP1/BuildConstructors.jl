@@ -9,7 +9,7 @@ state — without polluting the model object itself. Walk a nested constructor t
 and discover every parameter in one place.
 
 The final object stays domain-native: a `Normal`, a PDF, an amplitude, a callable.
-The constructor holds the bookkeeping of parameters.
+The constructor holds the bookkeeping of parameters; dispatch provides the building method.
 
 ## Installation
 
