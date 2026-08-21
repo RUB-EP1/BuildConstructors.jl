@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.9.1
+
+### Added
+
+- Optional `NativeMinuitExt` package extension: `Minuit(fcn, constructor)` infers
+  fit metadata from constructor descriptors, and `update!(constructor, fit)`
+  writes fitted values back into the tree.
+- NativeMinuit integration tests under `test/native_minuit/`.
+- Tutorial replacing Minuit2 with NativeMinuit + ComponentArrays.
+
+### Changed
+
+- Docs and README now reference NativeMinuit instead of Minuit2.
+
 ## 0.8.1
 
 ### Added

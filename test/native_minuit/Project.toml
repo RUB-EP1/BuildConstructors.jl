@@ -1,0 +1,14 @@
+[deps]
+BuildConstructors = "63b9b590-f22f-4e79-810f-ea9ba6849c26"
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
+NativeMinuit = "5523a57a-07f4-4aae-a9fd-d526bcb5d194"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[sources]
+BuildConstructors = {path = "../.."}
+NativeMinuit = {url = "https://github.com/fkguo/NativeMinuit.jl"}
+
+[compat]
+ComponentArrays = "0.15"
+NativeMinuit = "0.7"
+julia = "1.11"

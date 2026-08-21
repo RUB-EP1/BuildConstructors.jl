@@ -43,6 +43,13 @@ jobs:
               uses: julia-actions/cache@v3
             - uses: julia-actions/julia-buildpkg@v1
             - uses: julia-actions/julia-runtest@v1
+            - name: Test NativeMinuit integration
+              if: ${{ inputs.version == '1' }}
+              shell: julia --project=test/native_minuit --color=yes {0}
+              run: |
+                  using Pkg
+                  Pkg.instantiate()
+                  include("test/native_minuit/runtests.jl")
             - uses: julia-actions/julia-processcoverage@v1
               if: ${{ inputs.run_codecov }}
             - uses: codecov/codecov-action@v7
