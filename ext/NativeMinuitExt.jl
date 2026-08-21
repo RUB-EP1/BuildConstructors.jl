@@ -7,64 +7,6 @@ using NativeMinuit
 import BuildConstructors: update!
 import NativeMinuit: Minuit
 
-function _require_running!(constructor::BuildConstructors.AbstractConstructor)
-    isempty(running_names(constructor)) && throw(ArgumentError(
-        "NativeMinuit needs at least one free parameter; the constructor has none.",
-    ))
-end
-
-function _component_vector!(values::NamedTuple)
-    missing_names = Tuple(name for name in keys(values) if ismissing(values[name]))
-    isempty(missing_names) || throw(ArgumentError(
-        "no starting value is stored for $(missing_names); pass `start` with a value " *
-        "for every free parameter",
-    ))
-    all(value -> value isa Real, values) || throw(ArgumentError(
-        "NativeMinuit starting values must all be real numbers",
-    ))
-    return ComponentVector(values)
-end
-
-function _named_start(constructor::BuildConstructors.AbstractConstructor, start::Nothing)
-    _require_running!(constructor)
-    return _component_vector!(running_values(constructor))
-end
-
-function _named_start(constructor::BuildConstructors.AbstractConstructor, start::NamedTuple)
-    _require_running!(constructor)
-    return _component_vector!(merge(running_values(constructor), start))
-end
-
-function _named_start(constructor::BuildConstructors.AbstractConstructor, start)
-    throw(ArgumentError(
-        "`start` must be a `NamedTuple` of parameter overrides; got $(typeof(start))",
-    ))
-end
-
-function _default_errors(constructor)
-    return Float64[
-        ismissing(error) ? 0.1 : error for error in values(running_uncertainties(constructor))
-    ]
-end
-
-function _default_limits(constructor)
-    lower = values(running_lower_boundaries(constructor))
-    upper = values(running_upper_boundaries(constructor))
-    return collect(zip(lower, upper))
-end
-
-function _resolved_names(constructor, name, names)
-    expected = collect(string.(running_names(constructor)))
-    supplied = name === nothing ? names : name
-    if supplied !== nothing && String.(supplied) != expected
-        throw(ArgumentError(
-            "NativeMinuit parameter names must match the constructor order $expected; " *
-            "got $(String.(supplied))",
-        ))
-    end
-    return expected
-end
-
 """
     NativeMinuit.Minuit(fcn, constructor::AbstractConstructor; start, kwargs...)
 
@@ -84,27 +26,49 @@ function Minuit(
     fcn,
     constructor::BuildConstructors.AbstractConstructor;
     start = nothing,
-    name = nothing,
-    names = nothing,
     error = nothing,
     errors = nothing,
     limits = nothing,
     grad = nothing,
     kwargs...,
 )
-    start_ca = _named_start(constructor, start)
+    isempty(running_names(constructor)) && throw(ArgumentError(
+        "NativeMinuit needs at least one free parameter; the constructor has none.",
+    ))
+    start isa Union{Nothing, NamedTuple} || throw(ArgumentError(
+        "`start` must be a `NamedTuple` of parameter overrides; got $(typeof(start))",
+    ))
 
-    resolved_names = _resolved_names(constructor, name, names)
-    resolved_errors = error === nothing ?
-                      (errors === nothing ? _default_errors(constructor) : errors) : error
-    resolved_limits = limits === nothing ? _default_limits(constructor) : limits
+    x0 = start === nothing ? running_values(constructor) :
+         merge(running_values(constructor), start)
+
+    missing_names = Tuple(name for name in keys(x0) if ismissing(x0[name]))
+    isempty(missing_names) || throw(ArgumentError(
+        "no starting value is stored for $(missing_names); pass `start` with a value " *
+        "for every free parameter",
+    ))
+    all(value -> value isa Real, x0) || throw(ArgumentError(
+        "NativeMinuit starting values must all be real numbers",
+    ))
+
+    resolved_errors = if error !== nothing
+        error
+    elseif errors !== nothing
+        errors
+    else
+        Float64[ismissing(σ) ? 0.1 : σ for σ in values(running_uncertainties(constructor))]
+    end
 
     return Minuit(
         fcn,
-        start_ca;
-        name = resolved_names,
+        ComponentVector(x0);
+        name = collect(string.(running_names(constructor))),
         error = resolved_errors,
-        limits = resolved_limits,
+        limits = limits === nothing ?
+                 collect(zip(
+                     values(running_lower_boundaries(constructor)),
+                     values(running_upper_boundaries(constructor)),
+                 )) : limits,
         grad = grad,
         kwargs...,
     )
