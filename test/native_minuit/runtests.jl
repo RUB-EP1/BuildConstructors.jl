@@ -45,13 +45,14 @@ quadratic_constructor() = ConstructorOfNativeQuadratic(
         @test parameter_values(constructor).offset == 3.0
     end
 
-    @testset "starting values" begin
+    @testset "starting values come from the descriptors" begin
         objective(pars) = (pars.a - 1)^2 + (pars.b - 2)^2
 
-        overridden = Minuit(objective, quadratic_constructor(); start = (b = 1.5,))
-        @test collect(overridden.values) == [0.0, 1.5]
+        constructor = quadratic_constructor()
+        update!(constructor, (b = 1.5,))
+        @test collect(Minuit(objective, constructor).values) == [0.0, 1.5]
 
-        # `Running` carries no stored value, so it has to come from `start`
+        # `Running` stores no value, so the tree cannot describe the fit
         running_constructor = ConstructorOfNativeQuadratic(
             Running("a"),
             AdvancedParameter("b", 0.0; uncertainty = 0.2),
@@ -59,17 +60,9 @@ quadratic_constructor() = ConstructorOfNativeQuadratic(
         )
         @test_throws ArgumentError Minuit(objective, running_constructor)
 
-        fit = Minuit(objective, running_constructor; start = (a = 0.5,))
-        @test collect(fit.values) == [0.5, 0.0]
+        fit = Minuit(objective, constructor)
         migrad!(fit)
         @test fit.valid
-
-        # names that are not free parameters are rejected rather than appended
-        @test_throws ArgumentError Minuit(
-            objective,
-            quadratic_constructor();
-            start = (offset = 1.0,),
-        )
     end
 
     # `fix!`/`release!` are exported by NativeMinuit too, so they stay qualified

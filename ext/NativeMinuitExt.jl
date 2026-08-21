@@ -12,25 +12,50 @@ import NativeMinuit: Minuit
 const DEFAULT_STEP = 0.1
 
 """
-    NativeMinuit.Minuit(fcn, constructor::AbstractConstructor; start = (;), kwargs...)
+    NativeMinuit.Minuit(fcn, constructor::AbstractConstructor; kwargs...)
 
 Set up a `NativeMinuit.Minuit` fit for the currently free parameters of
 `constructor`.
 
-Names, starting values, step sizes, and limits are read from the `running_*`
-collectors, so fixed parameters stay out of the fit vector. `fcn` is called with
-a `ComponentVector`, which `build_model` can index by parameter name.
+The whole fit configuration is read from the descriptor tree, so fixed parameters
+stay out of the fit vector:
 
-`start` is a `NamedTuple` of starting-value overrides merged over
-`running_values(constructor)`; parameters described by `Running` have no stored
-value and must be listed there. Passing `name`, `error`, or `limits` explicitly
-replaces the inferred one, and every other keyword (`errordef`, `grad`, ...) goes
-straight to `NativeMinuit.Minuit`.
+| NativeMinuit input | source |
+| --- | --- |
+| `x0` | `running_values(constructor)` |
+| `name` | `running_names(constructor)` |
+| `error` | `running_uncertainties(constructor)`, `$DEFAULT_STEP` where none is stored |
+| `limits` | `running_lower_boundaries` and `running_upper_boundaries` |
+
+`fcn` is called with a `ComponentVector`, which `build_model` can index by
+parameter name. Keywords other than `name`, `error`, and `limits` (`errordef`,
+`grad`, ...) go straight to `NativeMinuit.Minuit`.
+
+# Starting values
+
+There is deliberately no `start` keyword. NativeMinuit pairs the starting vector
+with `name`, `error`, and `limits` *by position*, so a hand-written `x0` combined
+with inferred metadata would silently attach the wrong name and bounds to a
+parameter. Inference is therefore all-or-nothing: either the tree describes the
+fit completely, or you configure `NativeMinuit.Minuit` yourself.
+
+To move a starting point, write it into the tree first — `update!` takes a
+partial `NamedTuple`, so only the named parameters change:
+
+```julia
+update!(constructor, (σ_left = 0.8,))
+minuit = Minuit(objective, constructor; errordef = 0.5)
+```
+
+This requires every free descriptor to store a value, which rules out `Running`:
+it holds only a name, and `parameter_metadata` reports its value as `missing`.
+Give those parameters an `AdvancedParameter` or `FlexibleParameter` instead, or
+drop to `NativeMinuit.Minuit(fcn, x0)` and supply `name`, `error`, and `limits`
+along with your own starting vector.
 """
 function Minuit(
     fcn,
     constructor::AbstractConstructor;
-    start::NamedTuple = (;),
     name = collect(running_names(constructor)),
     error = Float64[
         ismissing(σ) ? DEFAULT_STEP : σ for σ in running_uncertainties(constructor)
@@ -43,21 +68,15 @@ function Minuit(
     ),
     kwargs...,
 )
-    free = running_names(constructor)
-    isempty(free) && throw(ArgumentError(
+    x0 = running_values(constructor)
+    isempty(x0) && throw(ArgumentError(
         "the constructor has no free parameters; `release!` at least one before fitting",
     ))
 
-    unknown = setdiff(keys(start), free)
-    isempty(unknown) || throw(ArgumentError(
-        "`start` names $(Tuple(unknown)), which are not free parameters of the " *
-        "constructor; the free ones are $free",
-    ))
-
-    x0 = merge(running_values(constructor), start)
-    unset = Tuple(n for n in free if !(x0[n] isa Real))
+    unset = Tuple(n for n in keys(x0) if !(x0[n] isa Real))
     isempty(unset) || throw(ArgumentError(
-        "no starting value stored for $unset; pass one, e.g. `start = ($(first(unset)) = 0.0,)`",
+        "$unset stores no starting value; set one with `update!(constructor, pars)`, " *
+        "or call `NativeMinuit.Minuit` directly with your own starting vector",
     ))
 
     return Minuit(fcn, ComponentVector{Float64}(x0); name, error, limits, kwargs...)

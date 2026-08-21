@@ -76,37 +76,36 @@ keywords (`errordef`, `grad`, `strategy`, …) go straight to `NativeMinuit.Minu
 
 ## Starting values
 
-Starts come from the descriptor tree. To try a different starting point without
-editing it, pass a `NamedTuple` that is merged over the stored values:
+Starting values come from the descriptor tree, and there is deliberately no
+`start` keyword. NativeMinuit pairs the starting vector with the names, step
+sizes, and limits *by position*, so a hand-written vector combined with inferred
+metadata would silently attach the wrong name and bounds to a parameter.
+Inference is all-or-nothing: either the tree describes the fit completely, or you
+call `NativeMinuit.Minuit` yourself and supply all four.
+
+To move a starting point, write it into the tree first. `update!` takes a partial
+`NamedTuple`, so only the parameters you name change:
 
 ```julia
-minuit = Minuit(
-    pars -> nll(constructor, data, pars),
-    constructor;
-    start = (μ_left = -0.5, σ_left = 0.8),
-    errordef = 0.5,
-)
+update!(constructor, (μ_left = -0.5, σ_left = 0.8))
+minuit = Minuit(pars -> nll(constructor, data, pars), constructor; errordef = 0.5)
 ```
 
-Only the keys you list are replaced; the rest stay as stored. A name that is not
-a free parameter — a typo, or one that is currently fixed — raises an
-`ArgumentError` instead of silently growing the fit vector.
-
-A plain `Running` descriptor stores no value at all, so `start` is the only way
-to give it one:
+This means every free descriptor has to store a value, which rules out `Running`
+— it holds only a name, and reports its value as `missing`:
 
 ```julia
 running_constructor = ConstructorOfGauss(
     Running("μ"),
     AdvancedParameter("σ", 1.0; boundaries = (0.05, 5.0)),
 )
-minuit = Minuit(
-    pars -> nll(running_constructor, data, pars),
-    running_constructor;
-    start = (μ = -0.5,),
-    errordef = 0.5,
-)
+Minuit(pars -> nll(running_constructor, data, pars), running_constructor)
+# ERROR: ArgumentError: (:μ,) stores no starting value
 ```
+
+Use an `AdvancedParameter` or `FlexibleParameter` for such parameters, or drop to
+`NativeMinuit.Minuit(fcn, x0)` with a starting vector and matching `name`,
+`error`, and `limits` of your own.
 
 ## Fixing parameters
 
