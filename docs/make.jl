@@ -44,7 +44,7 @@ bc_docs_doctest_only && doctest(BuildConstructors)
             "Tutorials" => [
                 "Nested Constructors" => "tutorials/nested-constructors.md",
                 "Optim with ComponentArrays" => "tutorials/optim-componentarrays.md",
-                "Minuit2 with ComponentArrays" => "tutorials/minuit2-componentarrays.md",
+                "NativeMinuit with ComponentArrays" => "tutorials/native-minuit-componentarrays.md",
                 "2D Model Construction" => "tutorials/2d-model-construction.md",
             ],
         ],
