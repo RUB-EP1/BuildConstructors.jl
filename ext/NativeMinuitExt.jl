@@ -7,35 +7,14 @@ using NativeMinuit
 import BuildConstructors: update!
 import NativeMinuit: Minuit
 
-function _named_start(constructor, start)
-    names = running_names(constructor)
-    isempty(names) && throw(ArgumentError(
+function _require_running!(constructor::BuildConstructors.AbstractConstructor)
+    isempty(running_names(constructor)) && throw(ArgumentError(
         "NativeMinuit needs at least one free parameter; the constructor has none.",
     ))
+end
 
-    values = if start === nothing
-        running_values(constructor)
-    elseif start isa ComponentArray
-        missing_names = filter(name -> !hasproperty(start, name), names)
-        isempty(missing_names) || throw(ArgumentError(
-            "start is missing constructor parameters $(Tuple(missing_names))",
-        ))
-        NamedTuple{names}(Tuple(getproperty(start, name) for name in names))
-    elseif start isa AbstractVector
-        length(start) == length(names) || throw(DimensionMismatch(
-            "start has $(length(start)) values, but the constructor has " *
-            "$(length(names)) free parameters",
-        ))
-        NamedTuple{names}(Tuple(start))
-    else
-        missing_names = filter(name -> !hasproperty(start, name), names)
-        isempty(missing_names) || throw(ArgumentError(
-            "start is missing constructor parameters $(Tuple(missing_names))",
-        ))
-        NamedTuple{names}(Tuple(getproperty(start, name) for name in names))
-    end
-
-    missing_names = Tuple(name for name in names if ismissing(getproperty(values, name)))
+function _component_vector!(values::NamedTuple)
+    missing_names = Tuple(name for name in keys(values) if ismissing(values[name]))
     isempty(missing_names) || throw(ArgumentError(
         "no starting value is stored for $(missing_names); pass `start` with a value " *
         "for every free parameter",
@@ -44,6 +23,22 @@ function _named_start(constructor, start)
         "NativeMinuit starting values must all be real numbers",
     ))
     return ComponentVector(values)
+end
+
+function _named_start(constructor::BuildConstructors.AbstractConstructor, start::Nothing)
+    _require_running!(constructor)
+    return _component_vector!(running_values(constructor))
+end
+
+function _named_start(constructor::BuildConstructors.AbstractConstructor, start::NamedTuple)
+    _require_running!(constructor)
+    return _component_vector!(merge(running_values(constructor), start))
+end
+
+function _named_start(constructor::BuildConstructors.AbstractConstructor, start)
+    throw(ArgumentError(
+        "`start` must be a `NamedTuple` of parameter overrides; got $(typeof(start))",
+    ))
 end
 
 function _default_errors(constructor)
@@ -80,9 +75,10 @@ names, uncertainties, and limits are inferred from the corresponding `running_*`
 collectors. NativeMinuit 0.7 preserves `ComponentVector` axes through the fit, so
 named property access continues to work in `build_model`.
 
-Pass `start` to override stored starting values. Parameters described only by
-`Running` have no stored value, so they require this override. Missing
-uncertainties use NativeMinuit's conventional step size of `0.1`.
+Pass `start` as a `NamedTuple` to override selected starting values; it is merged
+with `running_values(constructor)`. Parameters described only by `Running` have no
+stored value, so they require this override. Missing uncertainties use
+NativeMinuit's conventional step size of `0.1`.
 """
 function Minuit(
     fcn,

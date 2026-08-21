@@ -73,9 +73,17 @@ end
         fit_with_start = Minuit(
             objective,
             running_constructor;
-            start = ComponentArray(b = 0.0, a = 0.0),
+            start = (a = 0.0,),
         )
         @test collect(fit_with_start.values) == [0.0, 0.0]
+
+        fit_override = Minuit(
+            objective,
+            quadratic_constructor();
+            start = (b = 1.5,),
+        )
+        @test fit_override.values["b"] == 1.5
+        @test fit_override.values["a"] == 0.0
         migrad!(fit_with_start)
         @test fit_with_start.valid
     end

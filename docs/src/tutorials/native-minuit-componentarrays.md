@@ -70,20 +70,51 @@ The adapter obtains the following NativeMinuit arguments automatically:
 | errors | `running_uncertainties(constructor)` |
 | limits | `running_lower_boundaries` and `running_upper_boundaries` |
 
-An uncertainty of `missing` uses a step size of `0.1`. A plain `Running`
-descriptor has no stored starting value, so supply one explicitly:
+An uncertainty of `missing` uses a step size of `0.1`. By default, starting
+values come from `running_values(constructor)`. In the setup above, that already
+includes `σ_left = 1.0` together with the other free parameters.
+
+To try a different starting point without editing the descriptor tree, pass a
+`NamedTuple` override. It is merged with the stored starts from the constructor:
 
 ```julia
 minuit = Minuit(
     pars -> nll(constructor, data, pars),
     constructor;
-    start = ComponentArray(merge(running_values(constructor), (σ_left = 0.8,))),
+    start = (σ_left = 0.8,),
     errordef = 0.5,
 )
 ```
 
-In ordinary code it is usually simpler to provide a complete named start, for
-example `start = ComponentArray(μ_left = -0.5, σ_left = 0.8, ...)`.
+Only the named keys you supply are replaced. Here, `σ_left` changes from `1.0` to
+`0.8`; all other starts stay as stored.
+
+A plain `Running` descriptor has no stored starting value. Supply it through
+`start`:
+
+```julia
+running_constructor = ConstructorOfGauss(
+    Running("μ"),
+    AdvancedParameter("σ", 1.0; boundaries = (0.05, 5.0)),
+)
+minuit = Minuit(
+    pars -> nll(running_constructor, data, pars),
+    running_constructor;
+    start = (μ = -0.5,),
+    errordef = 0.5,
+)
+```
+
+When several parameters need overrides, list them in the same `NamedTuple`:
+
+```julia
+minuit = Minuit(
+    pars -> nll(constructor, data, pars),
+    constructor;
+    start = (μ_left = -0.5, σ_left = 0.8, f_left = 0.4),
+    errordef = 0.5,
+)
+```
 
 Constructor-level fixed parameters never enter NativeMinuit's fit vector. Fix
 them before creating the fit:
