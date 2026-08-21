@@ -1,10 +1,11 @@
 # NativeMinuit with ComponentArrays
 
 BuildConstructors has an optional integration with
-[`NativeMinuit.jl`](https://github.com/fkguo/NativeMinuit.jl). Pass a constructor
-as the second argument to `Minuit` and the fit configuration is inferred from its
-free-parameter metadata. NativeMinuit 0.7 currently requires Julia 1.11 or newer;
-the rest of BuildConstructors retains its Julia 1.9 compatibility.
+[`NativeMinuit.jl`](https://github.com/fkguo/NativeMinuit.jl): pass a constructor
+as the second argument to `Minuit` and the fit configuration is read off its
+free-parameter metadata. It activates once both `ComponentArrays` and
+`NativeMinuit` are loaded. NativeMinuit 0.7 needs Julia 1.11 or newer; the rest of
+BuildConstructors keeps its Julia 1.9 compatibility.
 
 ```julia
 using BuildConstructors
@@ -61,36 +62,38 @@ migrad!(minuit)
 hesse!(minuit)
 ```
 
-The adapter obtains the following NativeMinuit arguments automatically:
+Each NativeMinuit argument comes from one collector:
 
 | NativeMinuit input | BuildConstructors metadata |
 | --- | --- |
-| values | `running_values(constructor)` |
-| names | `running_names(constructor)` |
-| errors | `running_uncertainties(constructor)` |
-| limits | `running_lower_boundaries` and `running_upper_boundaries` |
+| `x0` | `running_values(constructor)` |
+| `name` | `running_names(constructor)` |
+| `error` | `running_uncertainties(constructor)`, `0.1` where none is stored |
+| `limits` | `running_lower_boundaries` and `running_upper_boundaries` |
 
-An uncertainty of `missing` uses a step size of `0.1`. By default, starting
-values come from `running_values(constructor)`. In the setup above, that already
-includes `σ_left = 1.0` together with the other free parameters.
+Passing any of these keywords explicitly overrides the inferred value; all other
+keywords (`errordef`, `grad`, `strategy`, …) go straight to `NativeMinuit.Minuit`.
 
-To try a different starting point without editing the descriptor tree, pass a
-`NamedTuple` override. It is merged with the stored starts from the constructor:
+## Starting values
+
+Starts come from the descriptor tree. To try a different starting point without
+editing it, pass a `NamedTuple` that is merged over the stored values:
 
 ```julia
 minuit = Minuit(
     pars -> nll(constructor, data, pars),
     constructor;
-    start = (σ_left = 0.8,),
+    start = (μ_left = -0.5, σ_left = 0.8),
     errordef = 0.5,
 )
 ```
 
-Only the named keys you supply are replaced. Here, `σ_left` changes from `1.0` to
-`0.8`; all other starts stay as stored.
+Only the keys you list are replaced; the rest stay as stored. A name that is not
+a free parameter — a typo, or one that is currently fixed — raises an
+`ArgumentError` instead of silently growing the fit vector.
 
-A plain `Running` descriptor has no stored starting value. Supply it through
-`start`:
+A plain `Running` descriptor stores no value at all, so `start` is the only way
+to give it one:
 
 ```julia
 running_constructor = ConstructorOfGauss(
@@ -105,42 +108,40 @@ minuit = Minuit(
 )
 ```
 
-When several parameters need overrides, list them in the same `NamedTuple`:
+## Fixing parameters
 
-```julia
-minuit = Minuit(
-    pars -> nll(constructor, data, pars),
-    constructor;
-    start = (μ_left = -0.5, σ_left = 0.8, f_left = 0.4),
-    errordef = 0.5,
-)
-```
-
-Constructor-level fixed parameters never enter NativeMinuit's fit vector. Fix
-them before creating the fit:
+Fixed parameters never enter NativeMinuit's fit vector. Fix them before creating
+the fit:
 
 ```julia
 BuildConstructors.fix!(constructor, (:μ_left,))
 minuit = Minuit(pars -> nll(constructor, data, pars), constructor; errordef = 0.5)
+migrad!(minuit)
 ```
 
-BuildConstructors deliberately does not export the common mutation names
-`fix!`, `release!`, and `update!`. Qualify `BuildConstructors.fix!` as above (or
-import it explicitly) when changing descriptors; use `NativeMinuit.fix!` when
-changing a NativeMinuit fit object.
+Both packages define `fix!` and `release!`, so keep them qualified in a session
+that loads both: `BuildConstructors.fix!` changes a descriptor,
+`NativeMinuit.fix!` changes a fit object. `update!` is unambiguous — BuildConstructors
+does not export it, but NativeMinuit does not define it either, so the
+`import BuildConstructors: update!` above is enough.
+
+## Reading the result
 
 NativeMinuit exposes fitted parameters by name (`minuit.values["σ_left"]`). To
-write all fitted values back into the descriptor tree, pass the fit directly to
+write all of them back into the descriptor tree, pass the minimized fit itself to
 `update!`:
 
 ```julia
+minuit.valid          # check the minimization converged first
 update!(constructor, minuit)
 parameter_values(constructor)
 ```
 
+Fixed parameters keep their stored values — they were never part of the fit.
+
 ## Why pass a constructor instead of a bare ComponentVector?
 
 NativeMinuit accepts a `ComponentVector` starting point directly, but you still
-need to assemble names, errors, and limits yourself. `Minuit(objective,
-constructor)` infers all of that from the descriptor tree and keeps fixed
-parameters out of the fit vector automatically.
+have to assemble names, step sizes, and limits yourself, and rebuild all four
+every time a parameter is fixed or released. `Minuit(objective, constructor)`
+derives them from the descriptor tree on each call instead.

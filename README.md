@@ -138,8 +138,9 @@ update!(constructor, fitted)   # write fitted values back into the descriptor tr
 object your descriptors can read. Built-in descriptors use `getproperty`, so
 `pars.μ_left` works out of the box.
 
-NativeMinuit has a direct optional adapter that infers all fit metadata and
-restores a `ComponentVector` at the objective boundary:
+Loading `ComponentArrays` and `NativeMinuit` together activates an optional
+adapter that reads names, starts, step sizes, and limits straight off the
+constructor:
 
 ```julia
 using ComponentArrays, NativeMinuit
@@ -149,8 +150,6 @@ minuit = Minuit(pars -> nll(constructor, data, pars), constructor; errordef = 0.
 migrad!(minuit)
 update!(constructor, minuit)
 ```
-
-Load `ComponentArrays` together with `NativeMinuit` to activate this integration.
 
 The same pattern applies to any return type: wrap `build_model` in your own
 `extended_negative_log_likelihood(constructor, pars, data)` or

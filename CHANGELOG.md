@@ -2,19 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
-## 0.9.1
+## 0.9.0
 
 ### Added
 
-- Optional `NativeMinuitExt` package extension: `Minuit(fcn, constructor)` infers
-  fit metadata from constructor descriptors, and `update!(constructor, fit)`
-  writes fitted values back into the tree.
-- NativeMinuit integration tests under `test/native_minuit/`.
-- Tutorial replacing Minuit2 with NativeMinuit + ComponentArrays.
+- Optional `NativeMinuitExt` package extension: `Minuit(fcn, constructor)` builds a
+  fit from the constructor's free-parameter metadata, and `update!(constructor, fit)`
+  writes fitted values back into the descriptor tree. Loaded once `ComponentArrays`
+  and `NativeMinuit` are both in the session.
+- NativeMinuit integration tests under `test/native_minuit/`, run in CI on the
+  latest stable Julia.
 
 ### Changed
 
-- Docs and README now reference NativeMinuit instead of Minuit2.
+- Replace the Minuit2 tutorial with a NativeMinuit + ComponentArrays one; docs and
+  README reference NativeMinuit instead of Minuit2.
+
+### Removed
+
+- `fix!`, `release!`, and `update!` are no longer exported; qualify them as
+  `BuildConstructors.fix!` or import them explicitly.
 
 ## 0.8.1
 

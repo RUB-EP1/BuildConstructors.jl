@@ -4,88 +4,72 @@ using BuildConstructors
 using ComponentArrays
 using NativeMinuit
 
-import BuildConstructors: update!
+import BuildConstructors: AbstractConstructor, update!
 import NativeMinuit: Minuit
 
+# Step size for a free parameter whose descriptor stores no uncertainty
+# (`Running`, `FlexibleParameter`); matches NativeMinuit's own default.
+const DEFAULT_STEP = 0.1
+
 """
-    NativeMinuit.Minuit(fcn, constructor::AbstractConstructor; start, kwargs...)
+    NativeMinuit.Minuit(fcn, constructor::AbstractConstructor; start = (;), kwargs...)
 
-Construct a `NativeMinuit.Minuit` fit directly from constructor metadata.
+Set up a `NativeMinuit.Minuit` fit for the currently free parameters of
+`constructor`.
 
-The fit contains the constructor's currently free parameters. Starting values,
-names, uncertainties, and limits are inferred from the corresponding `running_*`
-collectors. NativeMinuit 0.7 preserves `ComponentVector` axes through the fit, so
-named property access continues to work in `build_model`.
+Names, starting values, step sizes, and limits are read from the `running_*`
+collectors, so fixed parameters stay out of the fit vector. `fcn` is called with
+a `ComponentVector`, which `build_model` can index by parameter name.
 
-Pass `start` as a `NamedTuple` to override selected starting values; it is merged
-with `running_values(constructor)`. Parameters described only by `Running` have no
-stored value, so they require this override. Missing uncertainties use
-NativeMinuit's conventional step size of `0.1`.
+`start` is a `NamedTuple` of starting-value overrides merged over
+`running_values(constructor)`; parameters described by `Running` have no stored
+value and must be listed there. Passing `name`, `error`, or `limits` explicitly
+replaces the inferred one, and every other keyword (`errordef`, `grad`, ...) goes
+straight to `NativeMinuit.Minuit`.
 """
 function Minuit(
     fcn,
-    constructor::BuildConstructors.AbstractConstructor;
-    start = nothing,
-    error = nothing,
-    errors = nothing,
-    limits = nothing,
-    grad = nothing,
+    constructor::AbstractConstructor;
+    start::NamedTuple = (;),
+    name = collect(running_names(constructor)),
+    error = Float64[
+        ismissing(σ) ? DEFAULT_STEP : σ for σ in running_uncertainties(constructor)
+    ],
+    limits = collect(
+        zip(
+            running_lower_boundaries(constructor),
+            running_upper_boundaries(constructor),
+        ),
+    ),
     kwargs...,
 )
-    isempty(running_names(constructor)) && throw(ArgumentError(
-        "NativeMinuit needs at least one free parameter; the constructor has none.",
-    ))
-    start isa Union{Nothing, NamedTuple} || throw(ArgumentError(
-        "`start` must be a `NamedTuple` of parameter overrides; got $(typeof(start))",
+    free = running_names(constructor)
+    isempty(free) && throw(ArgumentError(
+        "the constructor has no free parameters; `release!` at least one before fitting",
     ))
 
-    x0 = start === nothing ? running_values(constructor) :
-         merge(running_values(constructor), start)
-
-    missing_names = Tuple(name for name in keys(x0) if ismissing(x0[name]))
-    isempty(missing_names) || throw(ArgumentError(
-        "no starting value is stored for $(missing_names); pass `start` with a value " *
-        "for every free parameter",
-    ))
-    all(value -> value isa Real, x0) || throw(ArgumentError(
-        "NativeMinuit starting values must all be real numbers",
+    unknown = setdiff(keys(start), free)
+    isempty(unknown) || throw(ArgumentError(
+        "`start` names $(Tuple(unknown)), which are not free parameters of the " *
+        "constructor; the free ones are $free",
     ))
 
-    resolved_errors = if error !== nothing
-        error
-    elseif errors !== nothing
-        errors
-    else
-        Float64[ismissing(σ) ? 0.1 : σ for σ in values(running_uncertainties(constructor))]
-    end
+    x0 = merge(running_values(constructor), start)
+    unset = Tuple(n for n in free if !(x0[n] isa Real))
+    isempty(unset) || throw(ArgumentError(
+        "no starting value stored for $unset; pass one, e.g. `start = ($(first(unset)) = 0.0,)`",
+    ))
 
-    return Minuit(
-        fcn,
-        ComponentVector(x0);
-        name = collect(string.(running_names(constructor))),
-        error = resolved_errors,
-        limits = limits === nothing ?
-                 collect(zip(
-                     values(running_lower_boundaries(constructor)),
-                     values(running_upper_boundaries(constructor)),
-                 )) : limits,
-        grad = grad,
-        kwargs...,
-    )
+    return Minuit(fcn, ComponentVector{Float64}(x0); name, error, limits, kwargs...)
 end
 
 """
     update!(constructor::AbstractConstructor, fit::NativeMinuit.Minuit)
 
-Write the current NativeMinuit values back into matching constructor descriptors.
+Write the fit's current parameter values back into the matching descriptors.
 """
-function update!(
-    constructor::BuildConstructors.AbstractConstructor,
-    fit::NativeMinuit.Minuit,
-)
-    names = Tuple(Symbol(parameter.name) for parameter in fit.params.pars)
-    values = NamedTuple{names}(Tuple(fit.values))
-    update!(constructor, values)
+function update!(constructor::AbstractConstructor, fit::Minuit)
+    update!(constructor, NamedTuple{Symbol.(fit.parameters)}(Tuple(fit.values)))
     return nothing
 end
 
