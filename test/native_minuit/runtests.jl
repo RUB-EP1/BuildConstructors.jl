@@ -29,6 +29,8 @@ quadratic_constructor() = ConstructorOfNativeQuadratic(
         fit = Minuit(objective, constructor)
         # the fixed `offset` stays out of the fit vector
         @test fit.parameters == ("a", "b")
+        @test fit.fcn.f === objective
+        @test fit.params.values isa ComponentVector
         @test collect(fit.values) == [0.0, 0.0]
         @test collect(fit.errors) == [0.2, 0.3]
         @test collect(fit.limits) == [(-5.0, 5.0), (-4.0, 4.0)]
@@ -38,11 +40,34 @@ quadratic_constructor() = ConstructorOfNativeQuadratic(
         @test fit.valid
         @test fit.values["a"] ≈ 1.0 atol = 2e-3
         @test fit.values["b"] ≈ 2.0 atol = 2e-3
+        @test fit.fmin.ext_values isa ComponentVector
+        @test fit.fmin.ext_errors isa ComponentVector
+
+        fitted = copy(fit.values)
+        @test fitted isa ComponentVector
+        @test fitted.a ≈ 1.0 atol = 2e-3
+        @test fitted.b ≈ 2.0 atol = 2e-3
 
         update!(constructor, fit)
-        @test parameter_values(constructor).a ≈ fit.values["a"]
-        @test parameter_values(constructor).b ≈ fit.values["b"]
+        @test parameter_values(constructor).a ≈ fitted.a
+        @test parameter_values(constructor).b ≈ fitted.b
         @test parameter_values(constructor).offset == 3.0
+    end
+
+    @testset "user gradient keeps the ComponentVector" begin
+        constructor = quadratic_constructor()
+        objective(pars) = (pars.a - 1)^2 + (pars.b - 2)^2
+        gradient_type = Ref{Any}()
+        function gradient(pars)
+            gradient_type[] = typeof(pars)
+            return ComponentArray(a = 2 * (pars.a - 1), b = 2 * (pars.b - 2))
+        end
+
+        fit = Minuit(objective, constructor; grad = gradient)
+        @test fit.cfwg.g === gradient
+        migrad!(fit)
+        @test fit.valid
+        @test gradient_type[] <: ComponentVector
     end
 
     @testset "starting values come from the descriptors" begin

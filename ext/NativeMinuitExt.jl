@@ -27,9 +27,11 @@ stay out of the fit vector:
 | `error` | `running_uncertainties(constructor)`, `$DEFAULT_STEP` where none is stored |
 | `limits` | `running_lower_boundaries` and `running_upper_boundaries` |
 
-`fcn` is called with a `ComponentVector`, which `build_model` can index by
-parameter name. Keywords other than `name`, `error`, and `limits` (`errordef`,
-`grad`, ...) go straight to `NativeMinuit.Minuit`.
+The `ComponentVector` is passed straight to NativeMinuit as `x0`. NativeMinuit
+uses it as the allocation template for objective and gradient callbacks and for
+external fit results, so this extension does not wrap `fcn` or `grad`. Keywords
+other than `name`, `error`, and `limits` (`errordef`, `grad`, ...) go straight to
+`NativeMinuit.Minuit`.
 
 # Starting values
 
@@ -86,9 +88,12 @@ end
     update!(constructor::AbstractConstructor, fit::NativeMinuit.Minuit)
 
 Write the fit's current parameter values back into the matching descriptors.
+
+NativeMinuit preserves the starting `ComponentVector` axes in
+`copy(fit.values)`, so the result itself supplies the name-to-value mapping.
 """
 function update!(constructor::AbstractConstructor, fit::Minuit)
-    update!(constructor, NamedTuple{Symbol.(fit.parameters)}(Tuple(fit.values)))
+    update!(constructor, copy(fit.values))
     return nothing
 end
 

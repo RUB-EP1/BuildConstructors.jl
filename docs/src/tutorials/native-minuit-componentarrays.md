@@ -43,8 +43,11 @@ truth = MixtureModel([Normal(-1.0, 0.45), Normal(1.2, 0.35)], [0.6, 0.4])
 data = rand(truth, 2_000)
 ```
 
-The objective receives a `ComponentVector`. NativeMinuit 0.7 preserves the axes
-through the fit, so named access works without manual index bookkeeping:
+The objective receives a `ComponentVector`. NativeMinuit 0.7 uses the starting
+container as an allocation template and preserves its axes through objective and
+gradient callbacks and external results, so named access works without manual
+index bookkeeping. The adapter passes the objective through unchanged; it does
+not install a callback wrapper:
 
 ```julia
 function nll(c, data, pars)
@@ -127,16 +130,22 @@ does not export it, but NativeMinuit does not define it either, so the
 ## Reading the result
 
 NativeMinuit exposes fitted parameters by name (`minuit.values["σ_left"]`). To
-write all of them back into the descriptor tree, pass the minimized fit itself to
-`update!`:
+get a standalone result with property access, copy the live values view. The copy
+retains its `ComponentVector` axes:
 
 ```julia
 minuit.valid          # check the minimization converged first
+fitted = copy(minuit.values)
+fitted.σ_left
+fitted.f_left
+
+# Or write every fitted value straight back into the descriptor tree:
 update!(constructor, minuit)
 parameter_values(constructor)
 ```
 
-Fixed parameters keep their stored values — they were never part of the fit.
+`update!` consumes that preserved named result directly. Fixed parameters keep
+their stored values — they were never part of the fit.
 
 ## Why pass a constructor instead of a bare ComponentVector?
 

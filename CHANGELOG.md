@@ -17,6 +17,10 @@ All notable changes to this project are documented in this file.
 
 - Replace the Minuit2 tutorial with a NativeMinuit + ComponentArrays one; docs and
   README reference NativeMinuit instead of Minuit2.
+- Lean on NativeMinuit 0.7's native structured-container support: objectives and
+  gradients are passed through unchanged, external results retain the
+  `ComponentVector` axes, and `update!(constructor, fit)` consumes the named
+  `copy(fit.values)` directly.
 
 ### Removed
 

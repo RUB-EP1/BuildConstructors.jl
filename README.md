@@ -148,6 +148,7 @@ import BuildConstructors: update!
 
 minuit = Minuit(pars -> nll(constructor, data, pars), constructor; errordef = 0.5)
 migrad!(minuit)
+fitted = copy(minuit.values)  # ComponentVector with named property access
 update!(constructor, minuit)
 ```
 
