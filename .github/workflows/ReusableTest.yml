@@ -43,6 +43,13 @@ jobs:
               uses: julia-actions/cache@v3
             - uses: julia-actions/julia-buildpkg@v1
             - uses: julia-actions/julia-runtest@v1
+            # Separate environment: NativeMinuit is a weak dependency and needs
+            # Julia >= 1.11, so this step is skipped on the oldest supported Julia.
+            - name: Test NativeMinuit integration
+              if: ${{ inputs.version == '1' }}
+              run: |
+                  julia --project=test/native_minuit --color=yes -e 'using Pkg; Pkg.instantiate()'
+                  julia --project=test/native_minuit --code-coverage=user --color=yes test/native_minuit/runtests.jl
             - uses: julia-actions/julia-processcoverage@v1
               if: ${{ inputs.run_codecov }}
             - uses: codecov/codecov-action@v7

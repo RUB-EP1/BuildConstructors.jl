@@ -2,5 +2,7 @@
 docs/Manifest.toml
 docs/build/
 docs/src/tutorials/2d-model-construction.md
+test/native_minuit/Manifest.toml
 examples/2d_distribution_fit/Manifest.toml
 examples/2d_distribution_fit/data/fit_events_full.arrow
+*.cov

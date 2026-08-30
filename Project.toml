@@ -7,12 +7,15 @@ version = "0.9.0"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 
 [weakdeps]
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DistributionsHEP = "0d0d6f60-fb7b-48ca-90bb-e14e8b1655a7"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+NativeMinuit = "5523a57a-07f4-4aae-a9fd-d526bcb5d194"
 NumericalDistributions = "13416b18-ec19-40e4-a123-e345ab61da74"
 
 [extensions]
+NativeMinuitExt = ["ComponentArrays", "NativeMinuit"]
 PhysicsModelsExt = ["Distributions", "DistributionsHEP", "JSON", "NumericalDistributions"]
 
 [compat]
@@ -20,6 +23,7 @@ ComponentArrays = "0.15"
 Distributions = "0.25"
 DistributionsHEP = "0.5, 0.6"
 JSON = "0.21, 1"
+NativeMinuit = "0.7"
 NumericalDistributions = "0.5, 0.7"
 OrderedCollections = "1.8, 2"
 julia = "1.9"

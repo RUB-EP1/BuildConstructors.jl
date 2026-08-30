@@ -37,6 +37,7 @@ block generates a `ConstructorOf…` type and a matching `build_model` method.
 
 ```julia
 using BuildConstructors
+import BuildConstructors: fix!, release!, update!
 using Distributions
 
 @with_parameters(Gauss; μ::P, σ::P, begin
@@ -137,6 +138,20 @@ update!(constructor, fitted)   # write fitted values back into the descriptor tr
 object your descriptors can read. Built-in descriptors use `getproperty`, so
 `pars.μ_left` works out of the box.
 
+Loading `ComponentArrays` and `NativeMinuit` together activates an optional
+adapter that reads names, starts, step sizes, and limits straight off the
+constructor:
+
+```julia
+using ComponentArrays, NativeMinuit
+import BuildConstructors: update!
+
+minuit = Minuit(pars -> nll(constructor, data, pars), constructor; errordef = 0.5)
+migrad!(minuit)
+fitted = copy(minuit.values)  # ComponentVector with named property access
+update!(constructor, minuit)
+```
+
 The same pattern applies to any return type: wrap `build_model` in your own
 `extended_negative_log_likelihood(constructor, pars, data)` or
 `amplitude(constructor, pars, x)` helpers.
@@ -215,7 +230,7 @@ See [`examples/2d_distribution_fit/`](examples/2d_distribution_fit/) for a neste
 ## Documentation
 
 Full API reference and tutorials (nested constructors, Optim + ComponentArrays,
-Minuit2): [https://RUB-EP1.github.io/BuildConstructors.jl](https://RUB-EP1.github.io/BuildConstructors.jl)
+NativeMinuit): [https://RUB-EP1.github.io/BuildConstructors.jl](https://RUB-EP1.github.io/BuildConstructors.jl)
 
 ## Related packages
 
