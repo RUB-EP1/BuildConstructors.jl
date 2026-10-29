@@ -1,7 +1,7 @@
 name = "BuildConstructors"
 uuid = "63b9b590-f22f-4e79-810f-ea9ba6849c26"
 version = "0.9.0"
-authors = ["Robert Hentges <robert.hentges@cern.ch>"]
+authors = ["Robert Hentges <robert.hentges@cern.ch>", "Mikhail Mikhasenko <mikhail.mikhasenko@gmail.com>"]
 
 [deps]
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
@@ -24,7 +24,7 @@ Distributions = "0.25"
 DistributionsHEP = "0.5, 0.6"
 JSON = "0.21, 1"
 NativeMinuit = "0.7"
-NumericalDistributions = "0.5, 0.7, 0.6"
+NumericalDistributions = "0.5, 0.7"
 OrderedCollections = "1.8, 2"
 julia = "1.9"
 
